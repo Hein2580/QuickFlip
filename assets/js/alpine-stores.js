@@ -125,20 +125,9 @@ document.addEventListener('alpine:init', () => {
                     console.log('🚫 Error Message:', corsError.message);
                     console.log('🚫 Full Error Object:', corsError);
                     
-                    // The real solution: API server needs CORS headers
                     return {
                         success: false,
-                        message: '🚫 CORS Error: Cannot access API from browser\n\n' +
-                                '✅ The request format is CORRECT (normal JSON)\n' +
-                                '✅ Your credentials are being sent properly\n' +
-                                '✅ The API URL is correct\n\n' +
-                                '❌ Problem: API server blocks browser requests\n\n' +
-                                '🔧 SOLUTION: API team must add these headers:\n' +
-                                '   • Access-Control-Allow-Origin: *\n' +
-                                '   • Access-Control-Allow-Headers: Content-Type, authkey\n' +
-                                '   • Access-Control-Allow-Methods: POST, OPTIONS\n\n' +
-                                '✅ Test in Postman - it will work there!\n' +
-                                '(Postman ignores CORS, browsers enforce it)'
+                        message: 'Unable to connect to login service. Please try again later or contact support.'
                     };
                 }
                 
@@ -284,7 +273,7 @@ document.addEventListener('alpine:init', () => {
                 console.log('🔑 Using sessionkey:', this.currentUser.sessionkey.substring(0, 20) + '...');
 
                 // Make a test API call with sessionkey in header using POST
-                const testResponse = await fetch('https://api-dev-ateam.duckdns.org/scm/api/shweb/auth/user/profile', {
+                const testResponse = await fetch('https://api-dev-ateam.duckdns.org/scm/api/shweb/auth/user/identify', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
