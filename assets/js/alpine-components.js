@@ -630,13 +630,49 @@ document.addEventListener('alpine:init', () => {
     window.addMobileNavigation = addMobileNavigation;
     window.removeMobileNavigation = removeMobileNavigation;
     
-    // Add mobile navigation HTML if on mobile
-    if (window.innerWidth <= 768) {
-        addMobileNavigation();
-    }
+    // Force add mobile navigation for debugging (always show on mobile)
+    setTimeout(() => {
+        console.log('🔧 Checking screen width:', window.innerWidth);
+        console.log('🔧 Current page:', window.location.pathname);
+        
+        // Only show mobile navigation on buyer.html, not on login page (index.html)
+        const isLoginPage = window.location.pathname.includes('index.html') || 
+                           window.location.pathname === '/' || 
+                           window.location.pathname.endsWith('/');
+        
+        if (isLoginPage) {
+            console.log('🚫 Login page detected, skipping mobile navigation');
+            return;
+        }
+        
+        if (window.innerWidth <= 768) {
+            console.log('📱 Mobile detected, adding navigation...');
+            addMobileNavigation();
+        } else {
+            console.log('💻 Desktop detected, no mobile nav needed');
+        }
+        
+        // DEBUG: Force show on desktop for testing (remove this later)
+        if (window.location.search.includes('debug=mobile')) {
+            console.log('🐛 DEBUG MODE: Forcing mobile navigation on desktop');
+            addMobileNavigation();
+        }
+    }, 500);
 
     // Handle window resize
     window.addEventListener('resize', () => {
+        console.log('🔄 Window resized to:', window.innerWidth);
+        
+        // Only show mobile navigation on buyer.html, not on login page (index.html)
+        const isLoginPage = window.location.pathname.includes('index.html') || 
+                           window.location.pathname === '/' || 
+                           window.location.pathname.endsWith('/');
+        
+        if (isLoginPage) {
+            console.log('🚫 Login page detected, skipping mobile navigation on resize');
+            return;
+        }
+        
         if (window.innerWidth <= 768) {
             addMobileNavigation();
         } else {
@@ -649,107 +685,190 @@ function addMobileNavigation() {
     // Don't add if already exists
     if (document.querySelector('.hamburger-btn')) return;
 
-    const currentPage = getCurrentPage();
+    // Additional safety check - don't add on login page
+    const isLoginPage = window.location.pathname.includes('index.html') || 
+                       window.location.pathname === '/' || 
+                       window.location.pathname.endsWith('/');
+    
+    if (isLoginPage) {
+        console.log('🚫 Safety check: Login page detected, aborting mobile navigation');
+        return;
+    }
 
-    // Add hamburger button
+    console.log('🔧 Adding mobile navigation...');
+
+    // Add hamburger button with simple click handler
     const hamburgerBtn = document.createElement('button');
     hamburgerBtn.className = 'hamburger-btn';
     hamburgerBtn.innerHTML = '☰';
-    hamburgerBtn.setAttribute('x-data', '{}');
-    hamburgerBtn.setAttribute('@click', '$refs.navComponent.openMenu()');
+    hamburgerBtn.style.cssText = `
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        z-index: 1000;
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        font-size: 1.2rem;
+        cursor: pointer;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+    `;
+    
+    // Simple click handler without Alpine.js complexity
+    hamburgerBtn.onclick = function() {
+        const menu = document.querySelector('.slide-menu');
+        const overlay = document.querySelector('.slide-menu-overlay');
+        if (menu && overlay) {
+            menu.style.display = 'block';
+            overlay.style.display = 'block';
+            setTimeout(() => {
+                menu.style.transform = 'translateX(0)';
+                overlay.style.opacity = '1';
+            }, 10);
+        }
+    };
+    
     document.body.appendChild(hamburgerBtn);
-
-    // Add FAB for quick actions
-    const fab = document.createElement('a');
-    fab.className = 'fab';
-    fab.href = '#';
-    fab.title = 'Quick Actions';
-    fab.innerHTML = '⚡';
-    fab.setAttribute('@click', 'showQuickActions = !showQuickActions');
-    document.body.appendChild(fab);
 
     // Add slide menu overlay
     const slideMenuOverlay = document.createElement('div');
-    slideMenuOverlay.setAttribute('x-data', '{}');
-    slideMenuOverlay.setAttribute('x-show', '$refs.navComponent && $refs.navComponent.showMenu');
-    slideMenuOverlay.setAttribute('x-transition.opacity.duration.300ms');
-    slideMenuOverlay.setAttribute('@click', '$refs.navComponent.closeMenu()');
     slideMenuOverlay.className = 'slide-menu-overlay';
-    slideMenuOverlay.style.display = 'none';
+    slideMenuOverlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1100;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s;
+        display: none;
+    `;
+    
+    slideMenuOverlay.onclick = function() {
+        const menu = document.querySelector('.slide-menu');
+        menu.style.transform = 'translateX(100%)';
+        slideMenuOverlay.style.opacity = '0';
+        setTimeout(() => {
+            menu.style.display = 'none';
+            slideMenuOverlay.style.display = 'none';
+        }, 300);
+    };
+    
     document.body.appendChild(slideMenuOverlay);
 
+    // Add slide menu
     const slideMenu = document.createElement('div');
-    slideMenu.setAttribute('x-data', 'navigationComponent()');
-    slideMenu.setAttribute('x-ref', 'navComponent');
-    slideMenu.setAttribute('x-init', 'init()');
-    slideMenu.setAttribute('x-show', 'showMenu');
-    slideMenu.setAttribute('x-transition:enter', 'transition ease-out duration-300');
-    slideMenu.setAttribute('x-transition:enter-start', 'transform translate-x-full');
-    slideMenu.setAttribute('x-transition:enter-end', 'transform translate-x-0');
-    slideMenu.setAttribute('x-transition:leave', 'transition ease-in duration-300');
-    slideMenu.setAttribute('x-transition:leave-start', 'transform translate-x-0');
-    slideMenu.setAttribute('x-transition:leave-end', 'transform translate-x-full');
     slideMenu.className = 'slide-menu';
-    slideMenu.style.display = 'none';
+    slideMenu.style.cssText = `
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 280px;
+        height: 100%;
+        background: white;
+        z-index: 1200;
+        transform: translateX(100%);
+        transition: transform 0.3s;
+        overflow-y: auto;
+        padding: 1rem 0;
+        display: none;
+    `;
     slideMenu.innerHTML = `
         <!-- User Profile Section -->
-        <div class="user-profile">
-            <div class="user-avatar-menu" x-text="userInitials"></div>
-            <div class="user-name" x-text="$store.auth.currentUser?.name || 'Unknown User'"></div>
-            <div class="user-role" x-text="$store.auth.currentUser?.role || 'Unknown Role'"></div>
+        <div class="user-profile" style="padding: 1.5rem 1rem; border-bottom: 1px solid #e0e0e0; text-align: center;">
+            <div class="user-avatar-menu" style="width: 60px; height: 60px; background: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.5rem; margin: 0 auto 1rem auto;">U</div>
+            <div class="user-name" style="font-weight: 600; color: #333; margin-bottom: 0.25rem;">Demo User</div>
+            <div class="user-role" style="color: #666; font-size: 0.9rem;">Buyer</div>
         </div>
 
         <!-- Navigation Items -->
-        <div class="menu-section">
-            <a href="#" class="menu-item" @click="closeMenu(); navigateToTab('dashboard')">
-                <span class="menu-icon">📊</span>
-                <span class="menu-label">Dashboard</span>
+        <div class="menu-section" style="border-bottom: 1px solid #e0e0e0; padding: 0.5rem 0;">
+            <a href="#" class="menu-item" onclick="navigateToTab('dashboard'); closeMobileMenu();" style="display: flex; align-items: center; padding: 1rem 1.5rem; text-decoration: none; color: #333; transition: background-color 0.2s;">
+                <span class="menu-icon" style="font-size: 1.2rem; margin-right: 1rem; width: 20px; text-align: center;">📊</span>
+                <span class="menu-label" style="flex: 1; font-weight: 500;">Dashboard</span>
             </a>
-            <a href="#" class="menu-item" @click="closeMenu(); navigateToTab('subscription')">
-                <span class="menu-icon">📋</span>
-                <span class="menu-label">Subscription</span>
+            <a href="#" class="menu-item" onclick="navigateToTab('subscription'); closeMobileMenu();" style="display: flex; align-items: center; padding: 1rem 1.5rem; text-decoration: none; color: #333; transition: background-color 0.2s;">
+                <span class="menu-icon" style="font-size: 1.2rem; margin-right: 1rem; width: 20px; text-align: center;">📋</span>
+                <span class="menu-label" style="flex: 1; font-weight: 500;">Subscription</span>
             </a>
-            <a href="#" class="menu-item" @click="closeMenu(); navigateToTab('invoices')">
-                <span class="menu-icon">🧾</span>
-                <span class="menu-label">Invoices</span>
+            <a href="#" class="menu-item" onclick="navigateToTab('invoices'); closeMobileMenu();" style="display: flex; align-items: center; padding: 1rem 1.5rem; text-decoration: none; color: #333; transition: background-color 0.2s;">
+                <span class="menu-icon" style="font-size: 1.2rem; margin-right: 1rem; width: 20px; text-align: center;">🧾</span>
+                <span class="menu-label" style="flex: 1; font-weight: 500;">Invoices</span>
             </a>
-            <a href="#" class="menu-item" @click="closeMenu(); navigateToTab('repayment')">
-                <span class="menu-icon">💰</span>
-                <span class="menu-label">Repayment</span>
+            <a href="#" class="menu-item" onclick="navigateToTab('repayment'); closeMobileMenu();" style="display: flex; align-items: center; padding: 1rem 1.5rem; text-decoration: none; color: #333; transition: background-color 0.2s;">
+                <span class="menu-icon" style="font-size: 1.2rem; margin-right: 1rem; width: 20px; text-align: center;">💰</span>
+                <span class="menu-label" style="flex: 1; font-weight: 500;">Repayment</span>
             </a>
-            <a href="#" class="menu-item" @click="closeMenu(); navigateToTab('notifications')">
-                <span class="menu-icon">🔔</span>
-                <span class="menu-label">Notifications</span>
-                <span x-show="$store.notifications.unreadCount > 0" class="badge" x-text="$store.notifications.unreadCount"></span>
+            <a href="#" class="menu-item" onclick="navigateToTab('notifications'); closeMobileMenu();" style="display: flex; align-items: center; padding: 1rem 1.5rem; text-decoration: none; color: #333; transition: background-color 0.2s;">
+                <span class="menu-icon" style="font-size: 1.2rem; margin-right: 1rem; width: 20px; text-align: center;">🔔</span>
+                <span class="menu-label" style="flex: 1; font-weight: 500;">Notifications</span>
             </a>
-            <a href="#" class="menu-item" @click="closeMenu(); navigateToTab('profile')">
-                <span class="menu-icon">👤</span>
-                <span class="menu-label">Profile</span>
+            <a href="#" class="menu-item" onclick="navigateToTab('profile'); closeMobileMenu();" style="display: flex; align-items: center; padding: 1rem 1.5rem; text-decoration: none; color: #333; transition: background-color 0.2s;">
+                <span class="menu-icon" style="font-size: 1.2rem; margin-right: 1rem; width: 20px; text-align: center;">👤</span>
+                <span class="menu-label" style="flex: 1; font-weight: 500;">Profile</span>
             </a>
-            <a href="#" class="menu-item" @click="closeMenu(); navigateToTab('wallet')">
-                <span class="menu-icon">💳</span>
-                <span class="menu-label">Wallet</span>
+            <a href="#" class="menu-item" onclick="navigateToTab('wallet'); closeMobileMenu();" style="display: flex; align-items: center; padding: 1rem 1.5rem; text-decoration: none; color: #333; transition: background-color 0.2s;">
+                <span class="menu-icon" style="font-size: 1.2rem; margin-right: 1rem; width: 20px; text-align: center;">💳</span>
+                <span class="menu-label" style="flex: 1; font-weight: 500;">Wallet</span>
             </a>
-        </div>
-
-        <!-- Settings & Options -->
-        <div class="menu-section">
-            <button class="menu-item" @click="toggleDarkMode(); closeMenu()">
-                <span class="menu-icon" x-text="darkModeIcon"></span>
-                <span class="menu-label" x-text="darkModeLabel"></span>
-            </button>
         </div>
 
         <!-- Account Actions -->
-        <div class="menu-section">
-            <button class="menu-item" @click="logout(); closeMenu()" style="color: #dc2626; background: #fee2e2; margin: 0.5rem; border-radius: 8px; border: none;">
-                <span class="menu-icon">🚪</span>
-                <span class="menu-label">Logout</span>
+        <div class="menu-section" style="padding: 0.5rem 0;">
+            <button onclick="logout(); closeMobileMenu();" style="display: flex; align-items: center; padding: 1rem 1.5rem; color: #dc2626; background: #fee2e2; margin: 0.5rem; border-radius: 8px; border: none; width: calc(100% - 1rem); cursor: pointer;">
+                <span class="menu-icon" style="font-size: 1.2rem; margin-right: 1rem; width: 20px; text-align: center;">🚪</span>
+                <span class="menu-label" style="flex: 1; font-weight: 500;">Logout</span>
             </button>
         </div>
     `;
+    
     document.body.appendChild(slideMenu);
+
+    // Add hover effects
+    const menuItems = slideMenu.querySelectorAll('.menu-item');
+    menuItems.forEach(item => {
+        item.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = '#f5f5f5';
+        });
+        item.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '';
+        });
+    });
+
+    console.log('✅ Mobile navigation added successfully');
 }
+
+// Global function to close mobile menu
+window.closeMobileMenu = function() {
+    const menu = document.querySelector('.slide-menu');
+    const overlay = document.querySelector('.slide-menu-overlay');
+    if (menu && overlay) {
+        menu.style.transform = 'translateX(100%)';
+        overlay.style.opacity = '0';
+        setTimeout(() => {
+            menu.style.display = 'none';
+            overlay.style.display = 'none';
+        }, 300);
+    }
+};
+
+// Global logout function
+window.logout = function() {
+    if (confirm('Are you sure you want to logout?')) {
+        localStorage.removeItem('quickflip_loggedIn');
+        localStorage.removeItem('quickflip_user');
+        window.location.href = 'index.html';
+    }
+};
 
 function removeMobileNavigation() {
     document.querySelector('.hamburger-btn')?.remove();
@@ -766,17 +885,23 @@ function getCurrentPage() {
 
 // Global navigation handler
 window.navigateToTab = function(tab) {
-    // Find the main dashboard component and call setActiveTab
-    const dashboardElement = document.querySelector('[x-data*="buyerDashboard"]');
-    if (dashboardElement && dashboardElement._x_dataStack && dashboardElement._x_dataStack[0]) {
-        const dashboardData = dashboardElement._x_dataStack[0];
-        if (dashboardData.setActiveTab) {
-            dashboardData.setActiveTab(tab);
+    console.log('🔄 Navigating to tab:', tab);
+    
+    // Simple approach: just set the hash and let the existing hash handler deal with it
+    window.location.hash = tab;
+    
+    // Also try to find and call the dashboard's setActiveTab directly
+    try {
+        const dashboardElement = document.querySelector('[x-data*="buyerDashboard"]');
+        if (dashboardElement && dashboardElement._x_dataStack && dashboardElement._x_dataStack[0]) {
+            const dashboardData = dashboardElement._x_dataStack[0];
+            if (dashboardData.setActiveTab) {
+                dashboardData.setActiveTab(tab);
+                console.log('✅ Successfully called setActiveTab');
+            }
         }
-    } else {
-        // Fallback: set hash and trigger hashchange
-        window.location.hash = tab;
-        window.dispatchEvent(new HashChangeEvent('hashchange'));
+    } catch (error) {
+        console.log('⚠️ Could not call setActiveTab directly, using hash fallback');
     }
 };
 
