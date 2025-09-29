@@ -2,7 +2,7 @@
   "name": "QuickFlip Buyer Dashboard",
   "short_name": "QuickFlip",
   "description": "Advanced Invoice Management Platform for Buyers",
-  "start_url": "/",
+  "start_url": "https://hein2580.github.io/QuickFlip/",
   "display": "standalone",
   "background_color": "#f8fafc",
   "theme_color": "#3b82f6",
@@ -24,6 +24,6 @@
   "categories": ["business", "finance", "productivity"],
   "lang": "en",
   "dir": "ltr",
-  "scope": "/",
+  "scope": "https://hein2580.github.io/QuickFlip/",
   "id": "quickflip-buyer-dashboard"
 }
