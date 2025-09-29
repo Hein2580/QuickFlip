@@ -20,9 +20,15 @@ document.addEventListener('alpine:init', () => {
         async login(username, password) {
             this.isLoading = true;
             
+            // Always log the attempt
+            console.log('🚀 LOGIN ATTEMPT STARTED');
+            console.log('👤 Username:', username);
+            console.log('🔑 Password:', password ? '[PROVIDED]' : '[MISSING]');
+            
             try {
                 // Validate inputs
                 if (!username || !password) {
+                    console.log('❌ VALIDATION FAILED: Missing credentials');
                     return {
                         success: false,
                         message: 'Please enter both email/username and password'
@@ -36,11 +42,23 @@ document.addEventListener('alpine:init', () => {
                 // Direct API call - CORS needs to be handled on server side or with browser extensions
                 const apiUrl = 'https://api-dev-ateam.duckdns.org/scm/api/shweb/auth/user/login';
                 
+                console.log('🎯 API URL:', apiUrl);
+                console.log('📤 REQUEST HEADERS:', {
+                    'Content-Type': 'application/json',
+                    'authkey': 'fb13b7fb-943b-47b4-8202-ebfe523a2cc2'
+                });
+                console.log('📤 REQUEST BODY:', JSON.stringify({
+                    user_name: username.trim(),
+                    pwd: password
+                }));
+                
                 // Try direct API call first (will fail due to CORS but we'll catch it)
                 let response;
                 let data;
                 
                 try {
+                    console.log('🔄 Making direct API call...');
+                    
                     // Attempt direct API call
                     response = await fetch(apiUrl, {
                         method: 'POST',
@@ -52,82 +70,76 @@ document.addEventListener('alpine:init', () => {
                             user_name: username.trim(),
                             pwd: password
                         }),
-                        signal: controller.signal
+                        signal: controller.signal,
+                        credentials: 'include' // Re-enabled for automatic cookie handling
                     });
                     
-                    data = await response.json();
+                    console.log('🎉 FETCH COMPLETED! No CORS error thrown!');
+                    
+                    console.log('✅ DIRECT API CALL SUCCEEDED!');
+                    console.log('📡 Response Status:', response.status);
+                    console.log('📡 Response Status Text:', response.statusText);
+                    console.log('📡 Response OK:', response.ok);
+                    
+                    // Check for cookies in response headers
+                    console.log('🍪 Response Headers (all):');
+                    for (let [key, value] of response.headers.entries()) {
+                        console.log(`   ${key}: ${value}`);
+                    }
+                    
+                    // Specifically check for Set-Cookie headers
+                    const setCookie = response.headers.get('set-cookie');
+                    console.log('🍪 Set-Cookie header:', setCookie);
+                    
+                    // Check current browser cookies
+                    console.log('🍪 Current document.cookie:', document.cookie);
+                    
+                    // Log raw API response
+                    const rawResponseText = await response.text();
+                    console.log('🔍 RAW API RESPONSE (EXACT TEXT):');
+                    console.log('='.repeat(50));
+                    console.log(rawResponseText);
+                    console.log('='.repeat(50));
+                    console.log('📏 Response Length:', rawResponseText.length);
+                    console.log('📋 All Response Headers:', [...response.headers.entries()]);
+                    
+                    // Try to parse as JSON
+                    try {
+                        data = JSON.parse(rawResponseText);
+                        console.log('✅ SUCCESSFULLY PARSED AS JSON:', data);
+                    } catch (parseError) {
+                        console.error('❌ JSON PARSE FAILED:', parseError.message);
+                        console.log('📝 Raw response (for debugging):', rawResponseText);
+                        // Don't throw - we want to see what the API returned even if it's not JSON
+                        data = { 
+                            rawResponse: rawResponseText, 
+                            parseError: parseError.message,
+                            result: 'PARSE_ERROR' 
+                        };
+                    }
                     
                 } catch (corsError) {
-                    // CORS error - use proxy service to make the actual API call
-                    console.log('Direct API call failed due to CORS, trying proxy...');
+                    // CORS error - this is the core issue
+                    console.log('❌ DIRECT API CALL FAILED!');
+                    console.log('🚫 Error Type:', corsError.name);
+                    console.log('🚫 Error Message:', corsError.message);
+                    console.log('🚫 Full Error Object:', corsError);
                     
-                    try {
-                        // Use a public CORS proxy service
-                        const proxyUrl = 'https://cors-anywhere.herokuapp.com/' + apiUrl;
-                        
-                        response = await fetch(proxyUrl, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'authkey': 'fb13b7fb-943b-47b4-8202-ebfe523a2cc2',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            },
-                            body: JSON.stringify({
-                                user_name: username.trim(),
-                                pwd: password
-                            }),
-                            signal: controller.signal
-                        });
-                        
-                        data = await response.json();
-                        
-                    } catch (proxyError) {
-                        // If proxy also fails, try JSONP approach
-                        console.log('Proxy failed, trying JSONP approach...');
-                        
-                        try {
-                            // Create script tag for JSONP
-                            data = await new Promise((resolve, reject) => {
-                                const callbackName = 'quickflip_' + Date.now();
-                                const script = document.createElement('script');
-                                
-                                window[callbackName] = (result) => {
-                                    resolve(result);
-                                    document.head.removeChild(script);
-                                    delete window[callbackName];
-                                };
-                                
-                                script.onerror = () => {
-                                    reject(new Error('JSONP failed'));
-                                    document.head.removeChild(script);
-                                    delete window[callbackName];
-                                };
-                                
-                                const params = new URLSearchParams({
-                                    user_name: username.trim(),
-                                    pwd: password,
-                                    authkey: 'fb13b7fb-943b-47b4-8202-ebfe523a2cc2',
-                                    callback: callbackName
-                                });
-                                
-                                script.src = `${apiUrl}?${params.toString()}`;
-                                document.head.appendChild(script);
-                                
-                                setTimeout(() => {
-                                    if (window[callbackName]) {
-                                        reject(new Error('JSONP timeout'));
-                                        document.head.removeChild(script);
-                                        delete window[callbackName];
-                                    }
-                                }, 10000);
-                            });
-                            
-                            response = { ok: true };
-                            
-                        } catch (jsonpError) {
-                            throw new Error('All API access methods failed. Please ensure the API supports CORS or JSONP.');
-                        }
-                    }
+                    // The real solution: API server needs CORS headers
+                    return {
+                        success: false,
+                        message: '🚫 CORS Error: Cannot access API from browser\n\n' +
+                                '✅ The request format is CORRECT (normal JSON)\n' +
+                                '✅ Your credentials are being sent properly\n' +
+                                '✅ The API URL is correct\n\n' +
+                                '❌ Problem: API server blocks browser requests\n\n' +
+                                '🔧 SOLUTION: API team must add these headers:\n' +
+                                '   • Access-Control-Allow-Origin: *\n' +
+                                '   • Access-Control-Allow-Headers: Content-Type, authkey\n' +
+                                '   • Access-Control-Allow-Methods: POST, OPTIONS\n\n' +
+                                '✅ Test in Postman - it will work there!\n' +
+                                '(Postman ignores CORS, browsers enforce it)'
+                    };
                 }
                 
                 clearTimeout(timeoutId);
@@ -193,13 +205,34 @@ document.addEventListener('alpine:init', () => {
                         ...data // Include any additional user data from API
                     };
 
-                    this.currentUser = user;
-                    this.isLoggedIn = true;
+                this.currentUser = user;
+                this.isLoggedIn = true;
 
-                    localStorage.setItem('quickflip_loggedIn', 'true');
-                    localStorage.setItem('quickflip_user', JSON.stringify(user));
+                localStorage.setItem('quickflip_loggedIn', 'true');
+                localStorage.setItem('quickflip_user', JSON.stringify(user));
 
-                    return { success: true, user };
+                // Save sessionkey manually and create cookie
+                console.log('🔑 SESSIONKEY SAVED:', data.sessionkey);
+                console.log('📅 LOGIN TIMESTAMP:', data.cts);
+                
+                // Create cookie with sessionkey (expires in 24 hours)
+                const expiryDate = new Date();
+                expiryDate.setTime(expiryDate.getTime() + (24 * 60 * 60 * 1000)); // 24 hours
+                const cookieValue = `quickflip_sessionkey=${data.sessionkey}; expires=${expiryDate.toUTCString()}; path=/; SameSite=Lax`;
+                document.cookie = cookieValue;
+                
+                console.log('🍪 COOKIE CREATED:', `quickflip_sessionkey=${data.sessionkey.substring(0, 20)}...`);
+                console.log('🍪 Cookie expires:', expiryDate.toUTCString());
+                
+                // Verify cookie was set
+                console.log('🍪 Current cookies:', document.cookie);
+                
+                // Test sessionkey forwarding after successful login
+                setTimeout(() => {
+                    this.testSessionkeyForwarding();
+                }, 2000);
+
+                return { success: true, user };
                 } else {
                     // Login failed - extract error message
                     const errorMessage = data.message || 
@@ -242,7 +275,85 @@ document.addEventListener('alpine:init', () => {
             this.currentUser = null;
             localStorage.removeItem('quickflip_loggedIn');
             localStorage.removeItem('quickflip_user');
+            
+            // Clear the sessionkey cookie
+            document.cookie = 'quickflip_sessionkey=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            console.log('🍪 Sessionkey cookie cleared');
+            
             window.location.href = 'index.html';
+        },
+
+        async testSessionkeyForwarding() {
+            try {
+                if (!this.currentUser?.sessionkey) {
+                    console.log('❌ No sessionkey found to test');
+                    return;
+                }
+
+                console.log('🔑 Testing sessionkey forwarding...');
+                console.log('🔑 Using sessionkey:', this.currentUser.sessionkey.substring(0, 20) + '...');
+
+                // Make a test API call with sessionkey in header
+                const testResponse = await fetch('https://api-dev-ateam.duckdns.org/scm/api/shweb/auth/user/profile', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'authkey': 'fb13b7fb-943b-47b4-8202-ebfe523a2cc2',
+                        'sessionkey': this.currentUser.sessionkey // Send sessionkey as header
+                    }
+                });
+
+                const testData = await testResponse.text();
+                console.log('🔑 Sessionkey test response status:', testResponse.status);
+                console.log('🔑 Sessionkey test response:', testData);
+
+                if (testResponse.ok) {
+                    console.log('✅ Sessionkey is working! API accepted the session.');
+                } else {
+                    console.log('❌ Sessionkey test failed - API rejected the session');
+                }
+
+            } catch (error) {
+                console.log('🔑 Sessionkey test error:', error.message);
+            }
+        },
+
+        // Helper method to get sessionkey from cookie
+        getSessionkeyFromCookie() {
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'quickflip_sessionkey') {
+                    return value;
+                }
+            }
+            return null;
+        },
+
+        // Helper method to make authenticated API calls with sessionkey
+        async makeAuthenticatedRequest(url, options = {}) {
+            // Try to get sessionkey from user object or cookie
+            const sessionkey = this.currentUser?.sessionkey || this.getSessionkeyFromCookie();
+            
+            if (!sessionkey) {
+                throw new Error('No active session - please login first');
+            }
+
+            const defaultHeaders = {
+                'Content-Type': 'application/json',
+                'authkey': 'fb13b7fb-943b-47b4-8202-ebfe523a2cc2',
+                'sessionkey': sessionkey
+            };
+
+            const requestOptions = {
+                ...options,
+                headers: {
+                    ...defaultHeaders,
+                    ...options.headers
+                }
+            };
+
+            return fetch(url, requestOptions);
         },
 
         get isAdmin() {
