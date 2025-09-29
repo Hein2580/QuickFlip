@@ -71,7 +71,7 @@ document.addEventListener('alpine:init', () => {
                             pwd: password
                         }),
                         signal: controller.signal,
-                        credentials: 'include' // Re-enabled for automatic cookie handling
+                        credentials: 'include'
                     });
                     
                     console.log('🎉 FETCH COMPLETED! No CORS error thrown!');
@@ -911,30 +911,68 @@ document.addEventListener('alpine:init', () => {
     Alpine.store('pwa', {
         showInstallBanner: false,
         deferredPrompt: null,
+        bannerDismissed: false,
 
         init() {
             this.setupPWAInstall();
+            // Check if banner was previously dismissed
+            this.bannerDismissed = localStorage.getItem('pwa_banner_dismissed') === 'true';
         },
 
         setupPWAInstall() {
             window.addEventListener('beforeinstallprompt', (e) => {
+                console.log('🔔 PWA install prompt available');
                 e.preventDefault();
                 this.deferredPrompt = e;
-                this.showInstallBanner = true;
+                
+                // Only show if not previously dismissed
+                if (!this.bannerDismissed) {
+                    // Add a small delay to ensure it's visible
+                    setTimeout(() => {
+                        this.showInstallBanner = true;
+                        console.log('📱 PWA banner shown');
+                    }, 1000);
+                }
+            });
+
+            // Hide banner when app is already installed
+            window.addEventListener('appinstalled', () => {
+                console.log('✅ PWA installed successfully');
+                this.showInstallBanner = false;
             });
         },
 
         async installApp() {
-            if (!this.deferredPrompt) return;
+            if (!this.deferredPrompt) {
+                console.log('❌ No install prompt available');
+                return;
+            }
 
-            this.deferredPrompt.prompt();
-            const { outcome } = await this.deferredPrompt.userChoice;
-
-            if (outcome === 'accepted') {
-                this.showInstallBanner = false;
+            try {
+                console.log('🔄 Showing install prompt...');
+                this.deferredPrompt.prompt();
+                const { outcome } = await this.deferredPrompt.userChoice;
+                
+                console.log('📱 User choice:', outcome);
+                
+                if (outcome === 'accepted') {
+                    console.log('✅ User accepted installation');
+                    this.showInstallBanner = false;
+                } else {
+                    console.log('❌ User dismissed installation');
+                }
+            } catch (error) {
+                console.log('❌ Install error:', error);
             }
 
             this.deferredPrompt = null;
+        },
+
+        dismissBanner() {
+            this.showInstallBanner = false;
+            this.bannerDismissed = true;
+            localStorage.setItem('pwa_banner_dismissed', 'true');
+            console.log('🚫 PWA banner dismissed');
         }
     });
 
