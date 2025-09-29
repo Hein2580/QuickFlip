@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Quickflip Buyer Dashboard</title>
+    <link rel="stylesheet" href="assets/css/style.css?v=3">
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#3b82f6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="QuickFlip">
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Alpine.js Stores and Components -->
+    <script src="assets/js/alpine-stores.js?v=3"></script>
+    <script src="assets/js/alpine-components.js?v=3"></script>
+    
+    <!-- Install Banner -->
+    <div x-show="$store.pwa.showInstallBanner"
+         x-transition.opacity.duration.300ms
+         class="install-banner">
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+            <div style="font-size: 2rem;">📱</div>
+            <div style="flex: 1;">
+                <h3 style="margin: 0; color: #3b82f6; font-size: 1.1rem;">Install QuickFlip App</h3>
+                <p style="margin: 0.25rem 0 0 0; font-size: 0.9rem; color: #666;">Get quick access and work offline</p>
+            </div>
+        </div>
+        <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+            <button @click="$store.pwa.installApp()" class="btn-primary" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
+                📥 Install App
+            </button>
+        </div>
+    </div>
+</head>
+<body x-data="buyerDashboard()" x-init="init()">
+    <header>
+        <h1>🚀 Quickflip Buyer Dashboard</h1>
+        <p>All-in-one platform for managing your subscriptions, invoices, repayments, notifications, profile, and wallet.</p>
+    </header>
+
+    <!-- Mobile Navigation (auto-injected by component) -->
+    <!-- Desktop Navigation - Hidden on mobile -->
+    <nav class="desktop-nav">
+        <a href="#dashboard" @click="setActiveTab('dashboard')" :class="activeTab === 'dashboard' ? 'active' : ''">📊 Dashboard</a>
+        <a href="#subscription" @click="setActiveTab('subscription')" :class="activeTab === 'subscription' ? 'active' : ''">📋 Subscription</a>
+        <a href="#invoices" @click="setActiveTab('invoices')" :class="activeTab === 'invoices' ? 'active' : ''">🧾 Invoices</a>
+        <a href="#repayment" @click="setActiveTab('repayment')" :class="activeTab === 'repayment' ? 'active' : ''">💰 Repayment</a>
+        <a href="#notifications" @click="setActiveTab('notifications')" :class="activeTab === 'notifications' ? 'active' : ''" style="position: relative;">
+            🔔 Notifications
+            <span x-show="$store.notifications.unreadCount > 0" class="notification-badge" x-text="$store.notifications.unreadCount" style="position: absolute; top: -8px; right: 10px; background: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7rem; font-weight: 600;"></span>
+        </a>
+        <a href="#profile" @click="setActiveTab('profile')" :class="activeTab === 'profile' ? 'active' : ''">👤 Profile</a>
+        <a href="#wallet" @click="setActiveTab('wallet')" :class="activeTab === 'wallet' ? 'active' : ''">💳 Wallet</a>
+        <button @click="$store.auth.logout()" class="btn btn-secondary" style="margin-left: auto; background: #ef4444; color: white; border: none;">🚪 Logout</button>
+    </nav>
+    
+    <main>
+        <!-- Success Message -->
+        <div x-show="successMessage" x-transition class="success-message" x-text="successMessage"></div>
+
+        <!-- Dashboard Tab -->
+        <div x-show="activeTab === 'dashboard'" class="tab-content" :class="{ 'active': activeTab === 'dashboard' }" x-data="dashboardComponent()" x-init="init()">
+            <section class="section-card">
+                <h2>Financial Overview</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">📥</div>
+                        <div class="stat-number" x-text="stats.invoicesReceived"></div>
+                        <div class="stat-label">Invoices Received</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">✅</div>
+                        <div class="stat-number" x-text="stats.invoicesSettled"></div>
+                        <div class="stat-label">Invoices Settled</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">💸</div>
+                        <div class="stat-number" x-text="'$' + stats.amountPaid.toLocaleString()"></div>
+                        <div class="stat-label">Total Paid</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⏳</div>
+                        <div class="stat-number" x-text="'$' + stats.amountPending.toLocaleString()"></div>
+                        <div class="stat-label">Amount Pending</div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h3>Total Amount Paid vs Time</h3>
+                    <div style="height: 300px; background: linear-gradient(135deg, #e0f2fe, #f3e5f5); border-radius: 12px; display: flex; align-items: center; justify-content: center; position: relative;">
+                        <canvas x-ref="paymentChart" width="400" height="200" style="max-width: 100%;"></canvas>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Subscription Tab -->
+        <div x-show="activeTab === 'subscription'" x-data="subscriptionComponent()" x-init="init()" class="tab-content" :class="{ 'active': activeTab === 'subscription' }">
+            <section class="section-card">
+                <h2>Subscription Management</h2>
+
+                <!-- Subscription Form Fields -->
+                <div class="form-section" style="background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid #0ea5e9;">
+                    <h3>⚙️ Subscription Settings</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Payment Method</label>
+                            <select style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; background: white;">
+                                <option>Credit Card (**** 4532)</option>
+                                <option>Bank Transfer</option>
+                                <option>PayPal</option>
+                                <option>Add New Payment Method</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Billing Cycle</label>
+                            <select style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; background: white;">
+                                <option>Monthly (Current)</option>
+                                <option>Quarterly (Save 5%)</option>
+                                <option>Yearly (Save 15%)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Email Notifications</label>
+                            <div style="display: flex; gap: 1rem; align-items: center;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" checked style="margin: 0;"> Billing Updates
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" checked style="margin: 0;"> Plan Changes
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" style="margin: 0;"> Usage Alerts
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1rem; display: flex; gap: 1rem;">
+                        <button class="btn btn-primary">💾 Save Settings</button>
+                        <button class="btn btn-secondary">📧 Update Email</button>
+                    </div>
+                </div>
+
+                <!-- Subscription Overview Stats -->
+                <div class="form-section" style="background: linear-gradient(135deg, #f0f9ff, #ecfdf5);">
+                    <h3>📊 Subscription Overview</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 2rem; color: #3b82f6;">📅</div>
+                            <div style="font-weight: 600; color: #1e293b;">Next Billing</div>
+                            <div style="color: #64748b;">Jan 15, 2024</div>
+                        </div>
+                        <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 2rem; color: #10b981;">💰</div>
+                            <div style="font-weight: 600; color: #1e293b;">Total Saved</div>
+                            <div style="color: #64748b;">$2,340</div>
+                        </div>
+                        <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 2rem; color: #f59e0b;">📈</div>
+                            <div style="font-weight: 600; color: #1e293b;">Usage This Month</div>
+                            <div style="color: #64748b;">23/50 invoices</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Current Plan Display -->
+                <div class="form-section" style="background: #ecfdf5; border-left-color: #10b981;">
+                    <h3>Current Plan</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h4 x-text="currentSubscription?.name || 'Monthly Plan'" style="margin: 0; color: #065f46;">Monthly Plan</h4>
+                            <p x-text="'$' + (currentSubscription?.price || 49) + '/' + (currentSubscription?.interval || 'month')" style="margin: 0.5rem 0 0 0; font-size: 1.2rem; font-weight: bold; color: #10b981;">$49/month</p>
+                            <p style="color: #047857; margin: 0.5rem 0 0 0;">Active since: December 1, 2023</p>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button @click="showPlanOptions = true" class="btn btn-secondary">Change Plan</button>
+                            <button @click="cancelSubscription()" class="btn" style="background: #fee2e2; color: #dc2626;">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Profile Approval Warning -->
+                <div x-show="(profileApproved !== undefined ? !profileApproved : false) && !currentSubscription" class="form-section" style="background: #fef3c7; border-left-color: #f59e0b;">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <div style="font-size: 2rem;">⚠️</div>
+                        <div>
+                            <h4 style="margin: 0; color: #92400e;">Profile Approval Pending</h4>
+                            <p style="margin: 0.5rem 0 0 0; color: #b45309;">Plan selection will be available once your business profile is approved by our team.</p>
+                            <button @click="$store.profile.data.approved = true; showMessage('Profile approved for demo!')" class="btn btn-primary" style="margin-top: 1rem;">
+                                Demo: Approve Profile
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Usage Tracking -->
+                <div class="form-section" style="background: linear-gradient(135deg, #fef3c7, #fed7aa); border-left: 4px solid #f59e0b;">
+                    <h3>📊 Usage Tracking</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 2rem; color: #3b82f6;">🧾</div>
+                            <div style="font-weight: 600; color: #1e293b;">Invoices This Month</div>
+                            <div style="font-size: 1.5rem; color: #3b82f6; font-weight: 800;">23</div>
+                            <div style="color: #64748b; font-size: 0.9rem;">Limit: 50</div>
+                        </div>
+                        <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 2rem; color: #10b981;">📈</div>
+                            <div style="font-weight: 600; color: #1e293b;">API Calls</div>
+                            <div style="font-size: 1.5rem; color: #10b981; font-weight: 800;">1,247</div>
+                            <div style="color: #64748b; font-size: 0.9rem;">No limit</div>
+                        </div>
+                        <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 2rem; color: #f59e0b;">👥</div>
+                            <div style="font-weight: 600; color: #1e293b;">Team Members</div>
+                            <div style="font-size: 1.5rem; color: #f59e0b; font-weight: 800;">5</div>
+                            <div style="color: #64748b; font-size: 0.9rem;">Limit: 10</div>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Monthly Usage Report</label>
+                            <select style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px;">
+                                <option>Email Summary (Weekly)</option>
+                                <option>Email Summary (Monthly)</option>
+                                <option>Detailed Report (Monthly)</option>
+                                <option>No Reports</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Usage Alerts</label>
+                            <select style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px;">
+                                <option>80% of limit (Recommended)</option>
+                                <option>50% of limit</option>
+                                <option>90% of limit</option>
+                                <option>No alerts</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Plan Comparison Tool -->
+                <div class="form-section" style="background: linear-gradient(135deg, #f8fafc, #f1f5f9); border-left: 4px solid #64748b;">
+                    <h3>🔍 Plan Comparison Tool</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Compare Current Plan With</label>
+                            <select style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px;">
+                                <option>Monthly Plan (Current)</option>
+                                <option>Yearly Plan</option>
+                                <option>Enterprise Plan</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Time Period</label>
+                            <select style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px;">
+                                <option>Next 12 months</option>
+                                <option>Next 24 months</option>
+                                <option>Next 36 months</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary" style="width: 100%;">📊 Generate Comparison Report</button>
+                </div>
+
+                <!-- Available Plans - Static Demo Content (Always Visible) -->
+                <div class="form-section">
+                    <h3>📋 Available Plans</h3>
+
+                    <!-- Static Demo Plans -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+                        <!-- Monthly Plan -->
+                        <div class="plan-card" style="border: 2px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; background: white; position: relative;">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                                <h4 style="margin: 0; color: #1e293b; font-size: 1.25rem;">Monthly Plan</h4>
+                            </div>
+                            <p style="color: #64748b; margin-bottom: 1.5rem; font-size: 0.95rem;">Perfect for small businesses with monthly invoice processing</p>
+                            <div style="font-size: 2rem; font-weight: 800; color: #1e40af; margin-bottom: 1rem;">$49/month</div>
+                                <ul style="list-style: none; padding: 0; margin-bottom: 1.5rem;">
+                                <li style="margin: 0.5rem 0; color: #64748b; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+                                    <span style="color: #10b981; font-size: 1rem;">✓</span>
+                                    <span>Up to 50 invoices/month</span>
+                                </li>
+                                <li style="margin: 0.5rem 0; color: #64748b; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+                                    <span style="color: #10b981; font-size: 1rem;">✓</span>
+                                    <span>Basic analytics</span>
+                                </li>
+                                <li style="margin: 0.5rem 0; color: #64748b; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+                                    <span style="color: #10b981; font-size: 1rem;">✓</span>
+                                    <span>Email support</span>
+                                </li>
+                                <li style="margin: 0.5rem 0; color: #64748b; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+                                    <span style="color: #10b981; font-size: 1rem;">✓</span>
+                                    <span>5% discount rate</span>
+                                </li>
+                                </ul>
+                            <button class="btn btn-primary" style="width: 100%; padding: 0.75rem; background: #10b981;">✅ Current Plan</button>
+                            </div>
+
+                        <!-- Yearly Plan -->
+                        <div class="plan-card" style="border: 2px solid #3b82f6; border-radius: 12px; padding: 1.5rem; background: #f0f9ff; position: relative;">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                                <h4 style="margin: 0; color: #1e293b; font-size: 1.25rem;">Yearly Plan</h4>
+                                <div style="background: #fef3c7; color: #92400e; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: 600;">MOST POPULAR</div>
+                            </div>
+                            <p style="color: #64748b; margin-bottom: 1.5rem; font-size: 0.95rem;">Best value for growing businesses with annual commitment</p>
+                            <div style="font-size: 2rem; font-weight: 800; color: #1e40af; margin-bottom: 1rem;">$490/year</div>
+                            <ul style="list-style: none; padding: 0; margin-bottom: 1.5rem;">
+                                <li style="margin: 0.5rem 0; color: #64748b; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+                                    <span style="color: #10b981; font-size: 1rem;">✓</span>
+                                    <span>Unlimited invoices</span>
+                                </li>
+                                <li style="margin: 0.5rem 0; color: #64748b; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+                                    <span style="color: #10b981; font-size: 1rem;">✓</span>
+                                    <span>Advanced analytics</span>
+                                </li>
+                                <li style="margin: 0.5rem 0; color: #64748b; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+                                    <span style="color: #10b981; font-size: 1rem;">✓</span>
+                                    <span>Priority support</span>
+                                </li>
+                                <li style="margin: 0.5rem 0; color: #64748b; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+                                    <span style="color: #10b981; font-size: 1rem;">✓</span>
+                                    <span>8% discount rate</span>
+                                </li>
+                                <li style="margin: 0.5rem 0; color: #64748b; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+                                    <span style="color: #10b981; font-size: 1rem;">✓</span>
+                                    <span>2 months free</span>
+                                </li>
+                            </ul>
+                            <button class="btn btn-primary" style="width: 100%; padding: 0.75rem; background: #3b82f6;" onclick="alert('Demo: Would upgrade to Yearly Plan')">⬆️ Upgrade ($490/year)</button>
+                        </div>
+                    </div>
+
+                    <!-- Additional Demo Content -->
+                    <div style="margin-top: 2rem; padding: 1.5rem; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <h4 style="margin: 0 0 1rem 0; color: #374151; font-size: 1.1rem;">💡 Plan Benefits</h4>
+                        <div style="display: grid; gap: 1rem;">
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <div style="background: #10b981; color: white; padding: 0.5rem; border-radius: 50%; font-size: 1rem;">✓</div>
+                                <div>
+                                    <strong>Save $98 annually</strong> with yearly plan
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <div style="background: #3b82f6; color: white; padding: 0.5rem; border-radius: 50%; font-size: 1rem;">🔒</div>
+                                <div>
+                                    <strong>Priority Support</strong> - 24/7 phone & chat support
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <div style="background: #f59e0b; color: white; padding: 0.5rem; border-radius: 50%; font-size: 1rem;">⚡</div>
+                                <div>
+                                    <strong>Advanced Analytics</strong> - Detailed reporting & insights
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Billing History & Invoice Management -->
+                <div class="form-section" style="background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid #0ea5e9;">
+                    <h3>💳 Billing History & Invoice Management</h3>
+
+                    <!-- Billing Summary Cards -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 2rem; color: #10b981;">💰</div>
+                            <div style="font-weight: 600; color: #1e293b;">Total Paid</div>
+                            <div style="font-size: 1.5rem; color: #10b981; font-weight: 800;">$147</div>
+                        </div>
+                        <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 2rem; color: #3b82f6;">📄</div>
+                            <div style="font-weight: 600; color: #1e293b;">Invoices</div>
+                            <div style="font-size: 1.5rem; color: #3b82f6; font-weight: 800;">3</div>
+                        </div>
+                        <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 2rem; color: #f59e0b;">⏰</div>
+                            <div style="font-weight: 600; color: #1e293b;">Next Payment</div>
+                            <div style="font-size: 1.2rem; color: #f59e0b; font-weight: 600;">Jan 15, 2024</div>
+                        </div>
+                    </div>
+
+                    <!-- Billing Filters -->
+                    <div class="form-row" style="margin-bottom: 1.5rem;">
+                        <div class="form-group">
+                            <label>Filter by Status</label>
+                            <select style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px;">
+                                <option>All Invoices</option>
+                                <option>Paid</option>
+                                <option>Pending</option>
+                                <option>Overdue</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Date Range</label>
+                            <select style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px;">
+                                <option>All Time</option>
+                                <option>Last 30 days</option>
+                                <option>Last 3 months</option>
+                                <option>Last 6 months</option>
+                                <option>Custom Range</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Amount Range</label>
+                            <select style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px;">
+                                <option>All Amounts</option>
+                                <option>Under $50</option>
+                                <option>$50 - $100</option>
+                                <option>Over $100</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Invoice Table -->
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Invoice #</th>
+                                    <th>Date</th>
+                                    <th>Plan</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>INV-2023-012</strong></td>
+                                    <td>Dec 1, 2023</td>
+                                    <td>Monthly Plan</td>
+                                    <td><strong>$49.00</strong></td>
+                                    <td><span style="background: #dcfce7; color: #166534; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.8rem; font-weight: 600;">✅ Paid</span></td>
+                                    <td style="display: flex; gap: 0.5rem;">
+                                        <button class="btn" style="background: #3b82f6; color: white; padding: 0.4rem 0.8rem; font-size: 0.8rem;">📄 View</button>
+                                        <button class="btn" style="background: #10b981; color: white; padding: 0.4rem 0.8rem; font-size: 0.8rem;">⬇️ Download</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>INV-2023-011</strong></td>
+                                    <td>Nov 1, 2023</td>
+                                    <td>Monthly Plan</td>
+                                    <td><strong>$49.00</strong></td>
+                                    <td><span style="background: #dcfce7; color: #166534; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.8rem; font-weight: 600;">✅ Paid</span></td>
+                                    <td style="display: flex; gap: 0.5rem;">
+                                        <button class="btn" style="background: #3b82f6; color: white; padding: 0.4rem 0.8rem; font-size: 0.8rem;">📄 View</button>
+                                        <button class="btn" style="background: #10b981; color: white; padding: 0.4rem 0.8rem; font-size: 0.8rem;">⬇️ Download</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>INV-2023-010</strong></td>
+                                    <td>Oct 1, 2023</td>
+                                    <td>Monthly Plan</td>
+                                    <td><strong>$49.00</strong></td>
+                                    <td><span style="background: #dcfce7; color: #166534; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.8rem; font-weight: 600;">✅ Paid</span></td>
+                                    <td style="display: flex; gap: 0.5rem;">
+                                        <button class="btn" style="background: #3b82f6; color: white; padding: 0.4rem 0.8rem; font-size: 0.8rem;">📄 View</button>
+                                        <button class="btn" style="background: #10b981; color: white; padding: 0.4rem 0.8rem; font-size: 0.8rem;">⬇️ Download</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>INV-2024-001</strong></td>
+                                    <td>Jan 15, 2024</td>
+                                    <td>Monthly Plan</td>
+                                    <td><strong>$49.00</strong></td>
+                                    <td><span style="background: #fef3c7; color: #92400e; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.8rem; font-weight: 600;">⏳ Pending</span></td>
+                                    <td style="display: flex; gap: 0.5rem;">
+                                        <button class="btn" style="background: #f59e0b; color: white; padding: 0.4rem 0.8rem; font-size: 0.8rem;">💳 Pay Now</button>
+                                        <button class="btn" style="background: #6b7280; color: white; padding: 0.4rem 0.8rem; font-size: 0.8rem;">📧 Remind</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Bulk Actions -->
+                    <div style="margin-top: 1.5rem; padding: 1rem; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <h4 style="margin: 0 0 1rem 0; color: #374151;">Bulk Actions</h4>
+                        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                            <button class="btn" style="background: #3b82f6; color: white;">📧 Email All Invoices</button>
+                            <button class="btn" style="background: #10b981; color: white;">⬇️ Download All PDFs</button>
+                            <button class="btn" style="background: #f59e0b; color: white;">🏷️ Add Tags</button>
+                            <button class="btn" style="background: #ef4444; color: white;">🗑️ Delete Selected</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Invoices Tab -->
+        <div x-show="activeTab === 'invoices'" class="tab-content" :class="{ 'active': activeTab === 'invoices' }" x-data="invoiceComponent()">
+            <section class="section-card">
+                <h2>Invoice Management</h2>
+                
+                <!-- Filters -->
+                <div class="form-section">
+                    <h3>Filter Invoices</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Date Range</label>
+                            <input type="date" x-model="$store.invoices.filters.dateFrom" placeholder="From">
+                        </div>
+                        <div class="form-group">
+                            <label>Invoice Number</label>
+                            <input type="text" x-model="$store.invoices.filters.number" placeholder="Search by invoice number">
+                        </div>
+                        <div class="form-group">
+                            <label>Amount Range</label>
+                            <input type="number" x-model="$store.invoices.filters.minAmount" placeholder="Min amount">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Invoice List -->
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Invoice #</th>
+                                <th>Date</th>
+                                <th>Seller</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="invoice in invoices" :key="invoice.id">
+                                <tr>
+                                    <td x-text="invoice.number"></td>
+                                    <td x-text="invoice.date"></td>
+                                    <td x-text="invoice.seller"></td>
+                                    <td x-text="'$' + invoice.amount.toLocaleString()"></td>
+                                    <td>
+                                        <span :class="'status-' + invoice.status.toLowerCase()" 
+                                              style="padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.8rem; font-weight: 600;"
+                                              x-text="invoice.status"></span>
+                                    </td>
+                                    <td>
+                                        <button @click="validateInvoice(invoice)" class="btn" style="background: #3b82f6; color: white; padding: 0.5rem 1rem; margin-right: 0.5rem;">
+                                            Validate
+                                        </button>
+                                        <button @click="viewDiscountOffers(invoice)" class="btn btn-secondary" style="padding: 0.5rem 1rem;">
+                                            View Offers
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Invoice Validation Modal -->
+                <div x-show="showValidation" x-transition class="form-section">
+                    <h3>Invoice Validation</h3>
+                    <div x-show="selectedInvoice">
+                        <p><strong>Invoice:</strong> <span x-text="selectedInvoice?.number"></span></p>
+                        <p><strong>Amount:</strong> $<span x-text="selectedInvoice?.amount"></span></p>
+                        <div class="form-group">
+                            <label>Validation Status</label>
+                            <select x-model="validationStatus">
+                                <option value="approved">Approve</option>
+                                <option value="request_changes">Request Changes</option>
+                            </select>
+                        </div>
+                        <div x-show="validationStatus === 'request_changes'" class="form-group">
+                            <label>Notes for Seller</label>
+                            <textarea x-model="validationNotes" rows="3" placeholder="Explain what needs to be changed..."></textarea>
+                        </div>
+                        <button @click="submitValidation()" class="btn btn-primary">Submit</button>
+                        <button @click="showValidation = false" class="btn btn-secondary">Cancel</button>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Repayment Tab -->
+        <div x-show="activeTab === 'repayment'" class="tab-content" :class="{ 'active': activeTab === 'repayment' }" x-data="repaymentComponent()">
+            <section class="section-card">
+                <h2>Institute Repayments</h2>
+                <p style="color: #64748b; margin-bottom: 2rem;">Manage payments to institutes who have paid sellers on your behalf</p>
+                
+                <!-- Repayment Example -->
+                <div class="form-section">
+                    <h3>How Discounts Work</h3>
+                    <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <div style="font-family: monospace; line-height: 1.8;">
+                            <div style="color: #1e293b; font-weight: 600;">Example Transaction:</div>
+                            <div style="color: #64748b;">Invoice Amount: <strong style="color: #059669;">$100</strong></div>
+                            <div style="color: #64748b;">Discount: <strong style="color: #dc2626;">10%</strong></div>
+                            <hr style="margin: 1rem 0;">
+                            <div style="color: #64748b;">Seller Receives: <strong style="color: #059669;">$90</strong></div>
+                            <div style="color: #64748b;">Buyer Pays: <strong style="color: #1e40af;">$92</strong></div>
+                            <div style="color: #64748b;">Institute Commission: <strong>$1</strong></div>
+                            <div style="color: #64748b;">Platform Commission: <strong>$1</strong></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Outstanding Repayments -->
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Invoice #</th>
+                                <th>Institute</th>
+                                <th>Original Amount</th>
+                                <th>You Pay</th>
+                                <th>Due Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="repayment in repayments" :key="repayment.id">
+                                <tr>
+                                    <td x-text="repayment.invoiceNumber"></td>
+                                    <td x-text="repayment.institute"></td>
+                                    <td x-text="'$' + repayment.originalAmount.toLocaleString()"></td>
+                                    <td x-text="'$' + repayment.payAmount.toLocaleString()"></td>
+                                    <td x-text="repayment.dueDate"></td>
+                                    <td>
+                                        <button @click="makeRepayment(repayment)" 
+                                                class="btn btn-primary" 
+                                                style="padding: 0.5rem 1rem;">
+                                            Pay Now
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <!-- Notifications Tab -->
+        <div x-show="activeTab === 'notifications'" class="tab-content" :class="{ 'active': activeTab === 'notifications' }" x-data="notificationComponent()">
+            <section class="section-card">
+                <h2>Notification Center</h2>
+                
+                <div style="margin-bottom: 2rem;">
+                    <button @click="markAllAsRead()" class="btn btn-secondary">Mark All as Read</button>
+                    <button @click="generateDemoNotification()" class="btn btn-primary" style="margin-left: 1rem;">Add Demo Notification</button>
+                </div>
+
+                <div x-show="notifications.length === 0" style="text-align: center; padding: 3rem; color: #64748b;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">🔔</div>
+                    <p>No notifications yet</p>
+                </div>
+
+                <template x-for="notification in notifications" :key="notification.id">
+                    <div class="notification-item" 
+                         :class="{ 'unread': !notification.read }">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div style="flex: 1;">
+                                <h4 style="margin: 0 0 0.5rem 0; color: #1e293b;" x-text="notification.title"></h4>
+                                <p style="margin: 0 0 1rem 0; color: #64748b;" x-text="notification.message"></p>
+                                <div style="display: flex; align-items: center; gap: 1rem;">
+                                    <span style="font-size: 0.8rem; color: #9ca3af;" x-text="notification.time"></span>
+                                    <span x-show="!notification.read" 
+                                          style="background: #3b82f6; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem;">
+                                        NEW
+                                    </span>
+                                </div>
+                            </div>
+                            <button @click="markAsRead(notification.id)" 
+                                    x-show="!notification.read"
+                                    style="background: none; border: none; color: #64748b; cursor: pointer; font-size: 1.2rem;">
+                                ✓
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </section>
+        </div>
+
+        <!-- Profile Tab -->
+        <div x-show="activeTab === 'profile'" class="tab-content" :class="{ 'active': activeTab === 'profile' }" x-data="profileComponent()" x-init="init()">
+            <section class="section-card">
+                <h2>Business Profile</h2>
+                
+                <!-- Profile Overview -->
+                <div class="form-section" style="background: linear-gradient(135deg, #f0f9ff, #ecfdf5);">
+                    <h3>👤 Profile Overview</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 2rem; color: #3b82f6;">⭐</div>
+                            <div style="font-weight: 600; color: #1e293b;">Profile Status</div>
+                            <div style="color: #10b981; font-weight: 500;">Verified</div>
+                        </div>
+                        <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 2rem; color: #10b981;">📈</div>
+                            <div style="font-weight: 600; color: #1e293b;">Member Since</div>
+                            <div style="color: #64748b;">Jan 2023</div>
+                        </div>
+                        <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 2rem; color: #f59e0b;">📊</div>
+                            <div style="font-weight: 600; color: #1e293b;">Invoices Processed</div>
+                            <div style="color: #64748b;">156</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Company Information -->
+                <div class="form-section">
+                    <h3>🏢 Company Information</h3>
+                    <div x-show="!isEditing">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Company Name</label>
+                                <p style="margin: 0; color: #374151; font-weight: 500; font-size: 1.1rem;" x-text="profile.companyName"></p>
+                            </div>
+                            <div class="form-group">
+                                <label>Business Registration Number</label>
+                                <p style="margin: 0; color: #374151; font-weight: 500;" x-text="profile.registrationNumber"></p>
+                            </div>
+                            <div class="form-group">
+                                <label>Industry</label>
+                                <p style="margin: 0; color: #374151; font-weight: 500;" x-text="profile.industry || 'Not specified'"></p>
+                            </div>
+                            <div class="form-group">
+                                <label>Annual Revenue</label>
+                                <p style="margin: 0; color: #374151; font-weight: 500;" x-text="profile.annualRevenue || 'Not specified'"></p>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Contact Email</label>
+                                <p style="margin: 0; color: #374151; font-weight: 500;" x-text="profile.email"></p>
+                            </div>
+                            <div class="form-group">
+                                <label>Phone Number</label>
+                                <p style="margin: 0; color: #374151; font-weight: 500;" x-text="profile.phone"></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Business Address</label>
+                            <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                <p style="margin: 0; color: #374151; font-weight: 500; line-height: 1.6;" x-text="profile.address"></p>
+                            </div>
+                        </div>
+                        <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+                            <button @click="startEdit()" class="btn btn-primary">✏️ Edit Profile</button>
+                            <button @click="showMessage('Demo: Profile exported successfully!')" class="btn btn-secondary">📄 Export PDF</button>
+                        </div>
+                    </div>
+
+                    <form x-show="isEditing" @submit.prevent="saveProfile()">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Company Name</label>
+                                <input type="text" x-model="editForm.companyName" required placeholder="Enter company name">
+                            </div>
+                            <div class="form-group">
+                                <label>Business Registration Number</label>
+                                <input type="text" x-model="editForm.registrationNumber" required placeholder="Enter registration number">
+                            </div>
+                            <div class="form-group">
+                                <label>Industry</label>
+                                <select x-model="editForm.industry" required>
+                                    <option value="">Select Industry</option>
+                                    <option value="retail">Retail</option>
+                                    <option value="manufacturing">Manufacturing</option>
+                                    <option value="services">Services</option>
+                                    <option value="technology">Technology</option>
+                                    <option value="healthcare">Healthcare</option>
+                                    <option value="finance">Finance</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Annual Revenue</label>
+                                <select x-model="editForm.annualRevenue" required>
+                                    <option value="">Select Range</option>
+                                    <option value="0-100k">$0 - $100k</option>
+                                    <option value="100k-1m">$100k - $1M</option>
+                                    <option value="1m-10m">$1M - $10M</option>
+                                    <option value="10m+">$10M+</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Contact Email</label>
+                                <input type="email" x-model="editForm.email" required placeholder="Enter email address">
+                            </div>
+                            <div class="form-group">
+                                <label>Phone Number</label>
+                                <input type="tel" x-model="editForm.phone" required placeholder="Enter phone number">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Business Address</label>
+                            <textarea x-model="editForm.address" rows="3" required placeholder="Enter complete business address"></textarea>
+                        </div>
+                        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                            <button type="submit" class="btn btn-primary">💾 Save Profile</button>
+                            <button type="button" @click="cancelEdit()" class="btn btn-secondary">❌ Cancel</button>
+                            <button type="button" @click="showMessage('Demo: All fields reset')" class="btn" style="background: #f1f5f9; color: #64748b;">🔄 Reset</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Business Documents -->
+                <div class="form-section">
+                    <h3>📋 Business Documents</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                        <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                                <div style="font-size: 2rem; color: #10b981;">📄</div>
+                                <div>
+                                    <h4 style="margin: 0; color: #1e293b;">Certificate of Incorporation</h4>
+                                    <p style="margin: 0.25rem 0 0 0; color: #64748b; font-size: 0.9rem;">Uploaded: Jan 15, 2023</p>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button class="btn" style="background: #10b981; color: white; font-size: 0.8rem; padding: 0.5rem 1rem;">View</button>
+                                <button class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.5rem 1rem;">Replace</button>
+                            </div>
+                        </div>
+                        <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                                <div style="font-size: 2rem; color: #3b82f6;">📊</div>
+                                <div>
+                                    <h4 style="margin: 0; color: #1e293b;">Tax Registration</h4>
+                                    <p style="margin: 0.25rem 0 0 0; color: #64748b; font-size: 0.9rem;">Uploaded: Jan 10, 2023</p>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button class="btn" style="background: #3b82f6; color: white; font-size: 0.8rem; padding: 0.5rem 1rem;">View</button>
+                                <button class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.5rem 1rem;">Replace</button>
+                            </div>
+                        </div>
+                        <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                                <div style="font-size: 2rem; color: #f59e0b;">⚠️</div>
+                                <div>
+                                    <h4 style="margin: 0; color: #1e293b;">Bank Statement</h4>
+                                    <p style="margin: 0.25rem 0 0 0; color: #64748b; font-size: 0.9rem;">Missing - Required for KYC</p>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button @click="showMessage('Demo: Upload dialog opened')" class="btn btn-primary" style="font-size: 0.8rem; padding: 0.5rem 1rem;">Upload</button>
+                                <button class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.5rem 1rem;">Skip</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Wallet Tab -->
+        <div x-show="activeTab === 'wallet'" class="tab-content" :class="{ 'active': activeTab === 'wallet' }" x-data="walletComponent()" x-init="init()">
+            <section class="section-card">
+                <h2>Digital Wallet</h2>
+
+                <!-- Wallet Overview -->
+                <div class="form-section" style="background: linear-gradient(135deg, #f0f9ff, #ecfdf5);">
+                    <h3>💳 Wallet Overview</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 2rem; color: #10b981;">💰</div>
+                            <div style="font-weight: 600; color: #1e293b;">Available Balance</div>
+                            <div style="color: #10b981; font-weight: 500; font-size: 1.2rem;" x-text="'$' + balance.toLocaleString()"></div>
+                        </div>
+                        <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 2rem; color: #3b82f6;">🔒</div>
+                            <div style="font-weight: 600; color: #1e293b;">KYC Status</div>
+                            <div :style="kycCompleted ? 'color: #10b981;' : 'color: #f59e0b;'" x-text="kycCompleted ? 'Verified' : 'Pending'"></div>
+                        </div>
+                        <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 2rem; color: #f59e0b;">📊</div>
+                            <div style="font-weight: 600; color: #1e293b;">Transactions</div>
+                            <div style="color: #64748b;" x-text="transactionHistory.length + ' total'"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="wallet-balance">
+                    <h3>Current Balance</h3>
+                    <div class="balance-amount" x-text="'$' + balance.toLocaleString()"></div>
+                    <p style="margin: 0; opacity: 0.8;">Available for transactions</p>
+                </div>
+
+                <!-- KYC Warning -->
+                <div x-show="!kycCompleted" class="form-section" style="background: #fef3c7; border-left-color: #f59e0b;">
+                    <h3>⚠️ KYC Verification Required</h3>
+                    <p>Complete your KYC verification to enable all wallet features. Airwallex will handle the verification process.</p>
+                    <div style="margin-top: 1rem; display: flex; gap: 1rem;">
+                        <button @click="startKYC()" class="btn btn-primary">🚀 Start KYC Verification</button>
+                        <button @click="showMessage('Demo: Learn more about KYC')" class="btn btn-secondary">📖 Learn More</button>
+                    </div>
+                </div>
+
+                <!-- Wallet Features -->
+                <div class="form-section">
+                    <h3>🛠️ Wallet Features</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 2rem; margin-bottom: 1rem;">💳</div>
+                            <h4 style="margin: 0 0 0.5rem 0; color: #1e293b;">Instant Transfers</h4>
+                            <p style="margin: 0; color: #64748b; font-size: 0.9rem;">Send money instantly to verified accounts</p>
+                        </div>
+                        <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 2rem; margin-bottom: 1rem;">🔒</div>
+                            <h4 style="margin: 0 0 0.5rem 0; color: #1e293b;">Bank-Level Security</h4>
+                            <p style="margin: 0; color: #64748b; font-size: 0.9rem;">256-bit encryption and fraud protection</p>
+                        </div>
+                        <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 2rem; margin-bottom: 1rem;">📱</div>
+                            <h4 style="margin: 0 0 0.5rem 0; color: #1e293b;">Mobile Optimized</h4>
+                            <p style="margin: 0; color: #64748b; font-size: 0.9rem;">Full wallet functionality on mobile devices</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Wallet Actions</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                        <button @click="showAddMoneyForm = !showAddMoneyForm" class="btn btn-primary">
+                            💰 Add Money
+                        </button>
+                        <button @click="showTransactionHistory = !showTransactionHistory" class="btn btn-secondary">
+                            📊 View History
+                        </button>
+                        <button @click="showWithdrawForm = !showWithdrawForm" class="btn btn-secondary" :disabled="!kycCompleted">
+                            🏦 Withdraw
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Add Money Form -->
+                <div x-show="showAddMoneyForm" x-transition class="form-section">
+                    <h4>Add Money to Wallet</h4>
+                    <form @submit.prevent="addMoney()">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Amount</label>
+                                <input type="number" x-model="addMoneyAmount" placeholder="Enter amount" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Payment Method</label>
+                                <select x-model="paymentMethod" required>
+                                    <option value="">Select payment method</option>
+                                    <option value="credit_card">Credit Card</option>
+                                    <option value="bank_transfer">Bank Transfer</option>
+                                    <option value="crypto">Cryptocurrency</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add Money</button>
+                        <button type="button" @click="showAddMoneyForm = false" class="btn btn-secondary">Cancel</button>
+                    </form>
+                </div>
+
+                <!-- Transaction History -->
+                <div x-show="showTransactionHistory" x-transition class="form-section">
+                    <h4>Transaction History</h4>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="transaction in transactionHistory" :key="transaction.id">
+                                    <tr>
+                                        <td x-text="transaction.date"></td>
+                                        <td x-text="transaction.type"></td>
+                                        <td x-text="'$' + transaction.amount.toLocaleString()"></td>
+                                        <td>
+                                            <span :class="'status-' + transaction.status.toLowerCase()" 
+                                                  style="padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.8rem; font-weight: 600;"
+                                                  x-text="transaction.status"></span>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Demo Login Info - Now handled by index.html login page -->
+
+    <script>
+        function buyerDashboard() {
+            return {
+                activeTab: 'dashboard',
+                successMessage: '',
+                
+                init() {
+                    this.checkLogin();
+                    this.setupEventListeners();
+                    this.addNotificationBadge();
+                },
+
+                checkLogin() {
+                    if (!this.$store.auth.isLoggedIn) {
+                        // Redirect to index.html for login
+                        window.location.href = 'index.html';
+                        return;
+                    }
+                },
+
+                setupEventListeners() {
+                    // Handle hash changes for navigation
+                    window.addEventListener('hashchange', () => {
+                        const hash = window.location.hash.substring(1);
+                        if (hash) {
+                            this.setActiveTab(hash);
+                        }
+                    });
+
+                    // Set initial tab from hash
+                    const hash = window.location.hash.substring(1) || 'dashboard';
+                    this.setActiveTab(hash);
+                },
+                
+                setActiveTab(tab) {
+                    this.activeTab = tab;
+
+                    // Update URL hash
+                    window.location.hash = tab;
+
+                    // Update mobile navigation if present
+                    this.updateMobileNav();
+                },
+
+                updateMobileNav() {
+                    // Update active state in mobile navigation
+                    const navItems = document.querySelectorAll('.bottom-nav-item');
+                    navItems.forEach(item => {
+                        item.classList.remove('active');
+                        if (item.getAttribute('href') === '#' + this.activeTab) {
+                            item.classList.add('active');
+                        }
+                    });
+                },
+                
+                addNotificationBadge() {
+                    // Add notification badge to navigation if needed
+                    const navBadge = document.querySelector('.notification-badge');
+                    if (navBadge) {
+                        navBadge.style.cssText = `
+                            background: #ef4444;
+                            color: white;
+                            border-radius: 50%;
+                            padding: 0.2rem 0.4rem;
+                            font-size: 0.7rem;
+                            font-weight: 600;
+                            position: absolute;
+                            top: -5px;
+                            right: -5px;
+                        `;
+                    }
+                },
+                
+                showMessage(message) {
+                    this.successMessage = message;
+                    setTimeout(() => {
+                        this.successMessage = '';
+                    }, 3000);
+                }
+            }
+        }
+    </script>
+    
+</body>
+</html>

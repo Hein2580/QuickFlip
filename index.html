@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Login - QuickFlip Buyer Dashboard</title>
+    <link rel="stylesheet" href="assets/css/style.css?v=2">
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#3b82f6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="QuickFlip">
+
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <!-- Alpine.js Stores and Components -->
+    <script src="assets/js/alpine-stores.js"></script>
+    <script src="assets/js/alpine-components.js"></script>
+</head>
+<body x-data="loginPage()" x-init="init()">
+    <header>
+        <h1>🚀 QuickFlip Buyer Dashboard</h1>
+        <p>Advanced Invoice Management Platform</p>
+    </header>
+
+    <main style="max-width: 400px; margin: 2rem auto;">
+        <!-- Smart Install Banner -->
+        <div x-show="$store.pwa.showInstallBanner"
+             x-transition.opacity.duration.300ms
+             class="install-banner">
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                <div style="font-size: 2rem;">📱</div>
+                <div style="flex: 1;">
+                    <h3 style="margin: 0; color: #3b82f6; font-size: 1.1rem;">Install QuickFlip App</h3>
+                    <p style="margin: 0.25rem 0 0 0; font-size: 0.9rem; color: #666;">Get quick access and work offline</p>
+                </div>
+            </div>
+            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button @click="$store.pwa.installApp()" class="btn-primary" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
+                    📥 Install App
+                </button>
+            </div>
+        </div>
+
+
+        <!-- Login Form -->
+        <div class="form-section">
+            <h2 style="text-align: center; margin-bottom: 2rem;">Login</h2>
+
+            <form @submit.prevent="handleLogin()">
+                <div class="form-group">
+                    <label for="username">Email/Username:</label>
+                    <input type="text"
+                           x-model="loginForm.username"
+                           id="username"
+                           name="username"
+                           required
+                           :disabled="isLoading || $store.auth.isLoading"
+                           placeholder="Enter email or username"
+                           autocomplete="username">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password"
+                           x-model="loginForm.password"
+                           id="password"
+                           name="password"
+                           required
+                           :disabled="isLoading || $store.auth.isLoading"
+                           placeholder="Enter password"
+                           autocomplete="current-password">
+                </div>
+
+                <div class="form-group">
+                    <button type="submit"
+                            class="btn-primary"
+                            style="width: 100%;"
+                            :disabled="isLoading || $store.auth.isLoading">
+                        <span x-show="!isLoading && !$store.auth.isLoading">Login</span>
+                        <span x-show="isLoading || $store.auth.isLoading">Logging in...</span>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Feature Preview -->
+            <div class="feature-preview">
+                <h4>✨ What You'll Experience</h4>
+                <div class="feature-list">
+                    <div class="feature-item">
+                        <span>📊</span>
+                        <span>Interactive dashboard with live statistics</span>
+                    </div>
+                    <div class="feature-item">
+                        <span>🧾</span>
+                        <span>Invoice management with validation workflow</span>
+                    </div>
+                    <div class="feature-item">
+                        <span>💰</span>
+                        <span>Digital wallet with KYC verification</span>
+                    </div>
+                    <div class="feature-item">
+                        <span>📱</span>
+                        <span>Mobile-responsive PWA experience</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function loginPage() {
+            return {
+                loginForm: {
+                    username: '',
+                    password: ''
+                },
+                isLoading: false,
+
+                init() {
+                    // Check if already logged in
+                    if (this.$store.auth.isLoggedIn) {
+                        window.location.href = 'buyer.html';
+                        return;
+                    }
+
+                    // Setup PWA install prompt
+                    this.setupPWAInstall();
+                },
+
+                setupPWAInstall() {
+                    window.addEventListener('beforeinstallprompt', (e) => {
+                        e.preventDefault();
+                        this.$store.pwa.deferredPrompt = e;
+                        this.$store.pwa.showInstallBanner = true;
+                    });
+                },
+
+
+                async handleLogin() {
+                    // Validation
+                    const username = this.loginForm.username.trim();
+                    const password = this.loginForm.password.trim();
+
+                    if (this.loginForm.username !== username) {
+                        await this.$store.ui.showAlert('Username cannot have leading or trailing spaces');
+                        return;
+                    }
+
+                    if (this.loginForm.password !== password) {
+                        await this.$store.ui.showAlert('Password cannot have leading or trailing spaces');
+                        return;
+                    }
+
+                    if (username.includes(' ')) {
+                        await this.$store.ui.showAlert('Username cannot contain spaces');
+                        return;
+                    }
+
+                    if (!username || !password) {
+                        await this.$store.ui.showAlert('Please enter both username and password');
+                        return;
+                    }
+
+                    this.isLoading = true;
+
+                    try {
+                        // Attempt login with API
+                        const result = await this.$store.auth.login(username, password);
+
+                        if (result.success) {
+                            // Show welcome message
+                            await this.$store.ui.showAlert(`Welcome back, ${result.user.name}! Redirecting to dashboard...`, 'Login Successful');
+
+                            // Small delay for better UX
+                            setTimeout(() => {
+                                window.location.href = 'buyer.html';
+                            }, 1000);
+                        } else {
+                            await this.$store.ui.showAlert(result.message || 'Invalid username or password');
+                        }
+                    } catch (error) {
+                        console.error('Login error:', error);
+                        await this.$store.ui.showAlert('Login failed: ' + (error.message || 'Please try again'));
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+
+            }
+        }
+    </script>
+</body>
+</html>
