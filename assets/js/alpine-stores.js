@@ -71,7 +71,7 @@ document.addEventListener('alpine:init', () => {
                             pwd: password
                         }),
                         signal: controller.signal,
-                        credentials: 'include'
+                        credentials: 'include' // Re-enabled for automatic cookie handling
                     });
                     
                     console.log('🎉 FETCH COMPLETED! No CORS error thrown!');
@@ -211,23 +211,14 @@ document.addEventListener('alpine:init', () => {
                 localStorage.setItem('quickflip_loggedIn', 'true');
                 localStorage.setItem('quickflip_user', JSON.stringify(user));
 
-                // Save sessionkey manually and create cookie
-                console.log('🔑 SESSIONKEY SAVED:', data.sessionkey);
+                // Sessionkey saved automatically by browser via Set-Cookie header
+                console.log('🔑 SESSIONKEY FROM API:', data.sessionkey);
                 console.log('📅 LOGIN TIMESTAMP:', data.cts);
                 
-                // Create cookie with sessionkey (expires in 24 hours)
-                const expiryDate = new Date();
-                expiryDate.setTime(expiryDate.getTime() + (24 * 60 * 60 * 1000)); // 24 hours
-                const cookieValue = `quickflip_sessionkey=${data.sessionkey}; expires=${expiryDate.toUTCString()}; path=/; SameSite=Lax`;
-                document.cookie = cookieValue;
+                // Check if cookies were saved automatically
+                console.log('🍪 Cookies after login:', document.cookie);
                 
-                console.log('🍪 COOKIE CREATED:', `quickflip_sessionkey=${data.sessionkey.substring(0, 20)}...`);
-                console.log('🍪 Cookie expires:', expiryDate.toUTCString());
-                
-                // Verify cookie was set
-                console.log('🍪 Current cookies:', document.cookie);
-                
-                // Test sessionkey forwarding after successful login
+                // Test automatic cookie forwarding after successful login
                 setTimeout(() => {
                     this.testSessionkeyForwarding();
                 }, 2000);
@@ -276,9 +267,8 @@ document.addEventListener('alpine:init', () => {
             localStorage.removeItem('quickflip_loggedIn');
             localStorage.removeItem('quickflip_user');
             
-            // Clear the sessionkey cookie
-            document.cookie = 'quickflip_sessionkey=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-            console.log('🍪 Sessionkey cookie cleared');
+            // Cookies will be cleared automatically by API logout endpoint
+            console.log('🍪 Automatic cookies should be cleared by API');
             
             window.location.href = 'index.html';
         },
@@ -290,31 +280,34 @@ document.addEventListener('alpine:init', () => {
                     return;
                 }
 
-                console.log('🔑 Testing sessionkey forwarding...');
+                console.log('🔑 Testing sessionkey forwarding with POST...');
                 console.log('🔑 Using sessionkey:', this.currentUser.sessionkey.substring(0, 20) + '...');
 
-                // Make a test API call with sessionkey in header
+                // Make a test API call with sessionkey in header using POST
                 const testResponse = await fetch('https://api-dev-ateam.duckdns.org/scm/api/shweb/auth/user/profile', {
-                    method: 'GET',
+                    method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'authkey': 'fb13b7fb-943b-47b4-8202-ebfe523a2cc2',
                         'sessionkey': this.currentUser.sessionkey // Send sessionkey as header
-                    }
+                    },
+                    body: JSON.stringify({
+                        action: 'get_profile'
+                    })
                 });
 
                 const testData = await testResponse.text();
-                console.log('🔑 Sessionkey test response status:', testResponse.status);
-                console.log('🔑 Sessionkey test response:', testData);
+                console.log('🔑 Sessionkey POST test response status:', testResponse.status);
+                console.log('🔑 Sessionkey POST test response:', testData);
 
                 if (testResponse.ok) {
-                    console.log('✅ Sessionkey is working! API accepted the session.');
+                    console.log('✅ Sessionkey is working! API accepted the POST session request.');
                 } else {
-                    console.log('❌ Sessionkey test failed - API rejected the session');
+                    console.log('❌ Sessionkey POST test failed - API rejected the session');
                 }
 
             } catch (error) {
-                console.log('🔑 Sessionkey test error:', error.message);
+                console.log('🔑 Sessionkey POST test error:', error.message);
             }
         },
 
