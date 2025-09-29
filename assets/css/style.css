@@ -931,7 +931,7 @@ table tr:hover {
     .hamburger-btn,
     .fab,
     .bottom-nav {
-        display: flex;
+        display: flex !important;
     }
 
     .desktop-nav {

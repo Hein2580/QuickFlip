@@ -59,6 +59,10 @@
     </header>
 
     <!-- Mobile Navigation (auto-injected by component) -->
+    <div x-data="navigationComponent()" x-ref="navComponent" x-init="init()" style="display: none;">
+        <!-- This component will handle mobile navigation -->
+    </div>
+    
     <!-- Desktop Navigation - Hidden on mobile -->
     <nav class="desktop-nav">
         <a href="#dashboard" @click="setActiveTab('dashboard')" :class="activeTab === 'dashboard' ? 'active' : ''">📊 Dashboard</a>
@@ -1020,6 +1024,7 @@
                     this.checkLogin();
                     this.setupEventListeners();
                     this.addNotificationBadge();
+                    this.initMobileNavigation();
                 },
 
                 checkLogin() {
@@ -1088,6 +1093,39 @@
                     setTimeout(() => {
                         this.successMessage = '';
                     }, 3000);
+                },
+
+                // Initialize mobile navigation
+                initMobileNavigation() {
+                    // Force check for mobile and add navigation if needed
+                    if (window.innerWidth <= 768) {
+                        // Ensure mobile navigation components are added
+                        setTimeout(() => {
+                            if (typeof addMobileNavigation === 'function') {
+                                addMobileNavigation();
+                            }
+                        }, 100);
+                    }
+                    
+                    // Listen for window resize to toggle mobile navigation
+                    window.addEventListener('resize', () => {
+                        if (window.innerWidth <= 768) {
+                            if (typeof addMobileNavigation === 'function') {
+                                addMobileNavigation();
+                            }
+                        } else {
+                            if (typeof removeMobileNavigation === 'function') {
+                                removeMobileNavigation();
+                            }
+                        }
+                    });
+                },
+
+                // Make setActiveTab available globally for mobile navigation
+                setActiveTab(tab) {
+                    this.activeTab = tab;
+                    window.location.hash = tab;
+                    this.updateMobileNav();
                 }
             }
         }

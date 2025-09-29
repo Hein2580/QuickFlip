@@ -626,6 +626,10 @@ document.addEventListener('alpine:init', () => {
         document.head.appendChild(style);
     }
 
+    // Always add mobile navigation functions to global scope
+    window.addMobileNavigation = addMobileNavigation;
+    window.removeMobileNavigation = removeMobileNavigation;
+    
     // Add mobile navigation HTML if on mobile
     if (window.innerWidth <= 768) {
         addMobileNavigation();
@@ -697,32 +701,32 @@ function addMobileNavigation() {
 
         <!-- Navigation Items -->
         <div class="menu-section">
-            <a href="#" class="menu-item" @click="closeMenu(); setActiveTab('dashboard')">
+            <a href="#" class="menu-item" @click="closeMenu(); navigateToTab('dashboard')">
                 <span class="menu-icon">📊</span>
                 <span class="menu-label">Dashboard</span>
             </a>
-            <a href="#" class="menu-item" @click="closeMenu(); setActiveTab('subscription')">
+            <a href="#" class="menu-item" @click="closeMenu(); navigateToTab('subscription')">
                 <span class="menu-icon">📋</span>
                 <span class="menu-label">Subscription</span>
             </a>
-            <a href="#" class="menu-item" @click="closeMenu(); setActiveTab('invoices')">
+            <a href="#" class="menu-item" @click="closeMenu(); navigateToTab('invoices')">
                 <span class="menu-icon">🧾</span>
                 <span class="menu-label">Invoices</span>
             </a>
-            <a href="#" class="menu-item" @click="closeMenu(); setActiveTab('repayment')">
+            <a href="#" class="menu-item" @click="closeMenu(); navigateToTab('repayment')">
                 <span class="menu-icon">💰</span>
                 <span class="menu-label">Repayment</span>
             </a>
-            <a href="#" class="menu-item" @click="closeMenu(); setActiveTab('notifications')">
+            <a href="#" class="menu-item" @click="closeMenu(); navigateToTab('notifications')">
                 <span class="menu-icon">🔔</span>
                 <span class="menu-label">Notifications</span>
                 <span x-show="$store.notifications.unreadCount > 0" class="badge" x-text="$store.notifications.unreadCount"></span>
             </a>
-            <a href="#" class="menu-item" @click="closeMenu(); setActiveTab('profile')">
+            <a href="#" class="menu-item" @click="closeMenu(); navigateToTab('profile')">
                 <span class="menu-icon">👤</span>
                 <span class="menu-label">Profile</span>
             </a>
-            <a href="#" class="menu-item" @click="closeMenu(); setActiveTab('wallet')">
+            <a href="#" class="menu-item" @click="closeMenu(); navigateToTab('wallet')">
                 <span class="menu-icon">💳</span>
                 <span class="menu-label">Wallet</span>
             </a>
@@ -759,6 +763,22 @@ function getCurrentPage() {
     const path = window.location.hash || '#dashboard';
     return path.substring(1);
 }
+
+// Global navigation handler
+window.navigateToTab = function(tab) {
+    // Find the main dashboard component and call setActiveTab
+    const dashboardElement = document.querySelector('[x-data*="buyerDashboard"]');
+    if (dashboardElement && dashboardElement._x_dataStack && dashboardElement._x_dataStack[0]) {
+        const dashboardData = dashboardElement._x_dataStack[0];
+        if (dashboardData.setActiveTab) {
+            dashboardData.setActiveTab(tab);
+        }
+    } else {
+        // Fallback: set hash and trigger hashchange
+        window.location.hash = tab;
+        window.dispatchEvent(new HashChangeEvent('hashchange'));
+    }
+};
 
 // Global message handler
 window.showMessage = function(message) {
