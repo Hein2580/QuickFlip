@@ -912,16 +912,29 @@ document.addEventListener('alpine:init', () => {
         showInstallBanner: false,
         deferredPrompt: null,
         bannerDismissed: false,
+        debugMode: true,
 
         init() {
+            console.log('🔧 PWA Store initializing...');
             this.setupPWAInstall();
             // Check if banner was previously dismissed
             this.bannerDismissed = localStorage.getItem('pwa_banner_dismissed') === 'true';
+            console.log('🔧 Banner dismissed status:', this.bannerDismissed);
+            
+            // Force show banner for testing (remove this later)
+            if (this.debugMode && !this.bannerDismissed) {
+                setTimeout(() => {
+                    console.log('🔧 DEBUG: Force showing banner for testing');
+                    this.showInstallBanner = true;
+                }, 2000);
+            }
         },
 
         setupPWAInstall() {
+            console.log('🔧 Setting up PWA install listeners...');
+            
             window.addEventListener('beforeinstallprompt', (e) => {
-                console.log('🔔 PWA install prompt available');
+                console.log('🔔 PWA install prompt available!');
                 e.preventDefault();
                 this.deferredPrompt = e;
                 
@@ -930,7 +943,7 @@ document.addEventListener('alpine:init', () => {
                     // Add a small delay to ensure it's visible
                     setTimeout(() => {
                         this.showInstallBanner = true;
-                        console.log('📱 PWA banner shown');
+                        console.log('📱 PWA banner shown via beforeinstallprompt');
                     }, 1000);
                 }
             });
@@ -940,6 +953,22 @@ document.addEventListener('alpine:init', () => {
                 console.log('✅ PWA installed successfully');
                 this.showInstallBanner = false;
             });
+
+            // Check if already installed
+            if (window.matchMedia('(display-mode: standalone)').matches) {
+                console.log('📱 App is already installed');
+            }
+
+            // Additional debugging
+            setTimeout(() => {
+                console.log('🔧 PWA Debug Info:');
+                console.log('  - Service Worker supported:', 'serviceWorker' in navigator);
+                console.log('  - Manifest link exists:', !!document.querySelector('link[rel="manifest"]'));
+                console.log('  - HTTPS:', location.protocol === 'https:');
+                console.log('  - Deferred prompt:', !!this.deferredPrompt);
+                console.log('  - Banner dismissed:', this.bannerDismissed);
+                console.log('  - Show banner:', this.showInstallBanner);
+            }, 3000);
         },
 
         async installApp() {
