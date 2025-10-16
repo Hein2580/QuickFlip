@@ -187,13 +187,32 @@
                         const result = await this.$store.auth.login(username, password);
 
                         if (result.success) {
-                            // Show welcome message
-                            await this.$store.ui.showAlert(`Welcome back, ${result.user.name}! Redirecting to dashboard...`, 'Login Successful');
+                            const user = result.user;
+                            
+                            // Check business intake status first
+                            if (!user.businessIntakeDone) {
+                                await this.$store.ui.showAlert('Welcome! Please complete your business intake form to continue.', 'Business Setup Required');
+                                
+                                setTimeout(() => {
+                                    window.location.href = 'business-intake.html';
+                            }, 1500);
+                            } 
+                            // Check subscription status second
+                            else if (!user.subscriptionActive) {
+                                await this.$store.ui.showAlert('Please select a subscription plan to access your dashboard.', 'Subscription Required');
+                                
+                                setTimeout(() => {
+                                    window.location.href = 'subscription-selection.html';
+                            }, 1500);
+                            }
+                            // All complete - go to dashboard
+                            else {
+                                await this.$store.ui.showAlert(`Welcome back, ${user.name}! Redirecting to dashboard...`, 'Login Successful');
 
-                            // Small delay for better UX
-                            setTimeout(() => {
-                                window.location.href = 'buyer.html';
+                                setTimeout(() => {
+                                    window.location.href = 'buyer.html';
                             }, 1000);
+                            }
                         } else {
                             await this.$store.ui.showAlert(result.message || 'Invalid username or password');
                         }

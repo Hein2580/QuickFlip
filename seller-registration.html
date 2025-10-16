@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seller Registration - QuickFlip</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="registration-container">
+        <h1>Seller Registration</h1>
+        <form id="sellerRegistrationForm" class="registration-form">
+            
+            <!-- Business Information Section -->
+            <section class="form-section">
+                <h2>Business Information</h2>
+                <div class="form-group">
+                    <label for="businessName">Business Name (Legal name) *</label>
+                    <input type="text" id="businessName" name="businessName" required>
+                </div>
+                <div class="form-group">
+                    <label for="tradingName">Trading Name (if different)</label>
+                    <input type="text" id="tradingName" name="tradingName">
+                </div>
+                <div class="form-group">
+                    <label for="businessType">Business Type *</label>
+                    <select id="businessType" name="businessType" required>
+                        <option value="">Select Business Type</option>
+                        <option value="sole_proprietor">Sole Proprietor</option>
+                        <option value="partnership">Partnership</option>
+                        <option value="company">Company</option>
+                        <option value="close_corporation">Close Corporation</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="companyRegNumber">Company Registration Number</label>
+                    <input type="text" id="companyRegNumber" name="companyRegNumber">
+                </div>
+                <div class="form-group">
+                    <label for="taxVatNumber">Tax/VAT Number</label>
+                    <input type="text" id="taxVatNumber" name="taxVatNumber">
+                </div>
+                <div class="form-group">
+                    <label for="industry">Industry/Category *</label>
+                    <select id="industry" name="industry" required>
+                        <option value="">Select Industry</option>
+                        <option value="tools">Tools</option>
+                        <option value="machinery">Machinery</option>
+                        <option value="hardware">Hardware</option>
+                        <option value="safety_gear">Safety Gear</option>
+                        <option value="automotive">Automotive</option>
+                        <option value="electronics">Electronics</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="businessDescription">Business Description *</label>
+                    <textarea id="businessDescription" name="businessDescription" rows="3" required 
+                              placeholder="Short summary of what you sell"></textarea>
+                </div>
+            </section>
+
+            <!-- Contact Information Section -->
+            <section class="form-section">
+                <h2>Contact Information</h2>
+                <div class="form-group">
+                    <label for="businessPhone">Business Phone Number *</label>
+                    <input type="tel" id="businessPhone" name="businessPhone" required>
+                </div>
+                <div class="form-group">
+                    <label for="businessEmail">Business Email Address *</label>
+                    <input type="email" id="businessEmail" name="businessEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="website">Website/Online Store Link</label>
+                    <input type="url" id="website" name="website" placeholder="https://">
+                </div>
+                <div class="form-group">
+                    <label for="physicalAddress">Physical Address *</label>
+                    <textarea id="physicalAddress" name="physicalAddress" rows="3" required
+                              placeholder="Street, suburb, city, postal code"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="postalAddress">Postal Address (if different)</label>
+                    <textarea id="postalAddress" name="postalAddress" rows="3"
+                              placeholder="If different from physical address"></textarea>
+                </div>
+            </section>
+
+            <!-- Authorized Representative Section -->
+            <section class="form-section">
+                <h2>Authorized Representative</h2>
+                <div class="form-group">
+                    <label for="repFullName">Full Name *</label>
+                    <input type="text" id="repFullName" name="repFullName" required>
+                </div>
+                <div class="form-group">
+                    <label for="repPosition">Position/Role *</label>
+                    <input type="text" id="repPosition" name="repPosition" required 
+                           placeholder="e.g., Owner, Director, Manager">
+                </div>
+                <div class="form-group">
+                    <label for="repIdNumber">ID/Passport Number *</label>
+                    <input type="text" id="repIdNumber" name="repIdNumber" required>
+                </div>
+                <div class="form-group">
+                    <label for="repContactNumber">Contact Number *</label>
+                    <input type="tel" id="repContactNumber" name="repContactNumber" required>
+                </div>
+                <div class="form-group">
+                    <label for="repEmail">Email Address *</label>
+                    <input type="email" id="repEmail" name="repEmail" required>
+                </div>
+            </section>
+
+            <!-- Banking & Payment Details Section -->
+            <section class="form-section">
+                <h2>Banking & Payment Details</h2>
+                <div class="form-group">
+                    <label for="bankName">Bank Name *</label>
+                    <input type="text" id="bankName" name="bankName" required>
+                </div>
+                <div class="form-group">
+                    <label for="branchCode">Branch Code/Branch Name *</label>
+                    <input type="text" id="branchCode" name="branchCode" required>
+                </div>
+                <div class="form-group">
+                    <label for="accountHolder">Account Holder Name *</label>
+                    <input type="text" id="accountHolder" name="accountHolder" required>
+                </div>
+                <div class="form-group">
+                    <label for="accountNumber">Account Number *</label>
+                    <input type="text" id="accountNumber" name="accountNumber" required>
+                </div>
+                <div class="form-group">
+                    <label for="accountType">Account Type *</label>
+                    <select id="accountType" name="accountType" required>
+                        <option value="">Select Account Type</option>
+                        <option value="cheque">Cheque</option>
+                        <option value="savings">Savings</option>
+                        <option value="business">Business</option>
+                    </select>
+                </div>
+            </section>
+
+            <!-- Supporting Documents Section -->
+            <section class="form-section">
+                <h2>Compliance & Supporting Documents</h2>
+                <div class="form-group">
+                    <label for="companyRegCert">Company Registration Certificate (CIPC document)</label>
+                    <input type="file" id="companyRegCert" name="companyRegCert" accept=".pdf,.jpg,.jpeg,.png">
+                    <small>Upload if your business is registered</small>
+                </div>
+                <div class="form-group">
+                    <label for="proofOfAddress">Proof of Address *</label>
+                    <input type="file" id="proofOfAddress" name="proofOfAddress" required accept=".pdf,.jpg,.jpeg,.png">
+                    <small>Utility bill or lease agreement</small>
+                </div>
+                <div class="form-group">
+                    <label for="idCopy">Copy of ID/Passport (Authorized Representative) *</label>
+                    <input type="file" id="idCopy" name="idCopy" required accept=".pdf,.jpg,.jpeg,.png">
+                </div>
+                <div class="form-group">
+                    <label for="taxClearance">Tax Clearance/VAT Certificate</label>
+                    <input type="file" id="taxClearance" name="taxClearance" accept=".pdf,.jpg,.jpeg,.png">
+                    <small>If required by platform</small>
+                </div>
+            </section>
+
+            <!-- Storefront Setup Section -->
+            <section class="form-section">
+                <h2>Storefront Setup</h2>
+                <div class="form-group">
+                    <label for="storeName">Store/Shop Name *</label>
+                    <input type="text" id="storeName" name="storeName" required
+                           placeholder="As it will appear to customers">
+                </div>
+                <div class="form-group">
+                    <label for="storeLogo">Store Logo</label>
+                    <input type="file" id="storeLogo" name="storeLogo" accept=".jpg,.jpeg,.png">
+                    <small>Recommended size: 200x200px</small>
+                </div>
+                <div class="form-group">
+                    <label for="storeBanner">Banner/Cover Image</label>
+                    <input type="file" id="storeBanner" name="storeBanner" accept=".jpg,.jpeg,.png">
+                    <small>Recommended size: 1200x300px</small>
+                </div>
+                <div class="form-group">
+                    <label for="productCategories">Product Categories *</label>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" name="productCategories" value="power_tools"> Power Tools</label>
+                        <label><input type="checkbox" name="productCategories" value="industrial_machinery"> Industrial Machinery</label>
+                        <label><input type="checkbox" name="productCategories" value="safety_gear"> Safety Gear</label>
+                        <label><input type="checkbox" name="productCategories" value="hand_tools"> Hand Tools</label>
+                        <label><input type="checkbox" name="productCategories" value="automotive"> Automotive</label>
+                        <label><input type="checkbox" name="productCategories" value="electronics"> Electronics</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="shippingOptions">Shipping/Delivery Options *</label>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" name="shippingOptions" value="local_delivery"> Local Delivery</label>
+                        <label><input type="checkbox" name="shippingOptions" value="courier"> Courier</label>
+                        <label><input type="checkbox" name="shippingOptions" value="pickup"> Store Pickup</label>
+                        <label><input type="checkbox" name="shippingOptions" value="national_shipping"> National Shipping</label>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Terms and Conditions -->
+            <section class="form-section">
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="agreeTerms" name="agreeTerms" required>
+                        I agree to the <a href="#" target="_blank">Terms and Conditions</a> and <a href="#" target="_blank">Seller Agreement</a> *
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="agreePrivacy" name="agreePrivacy" required>
+                        I agree to the <a href="#" target="_blank">Privacy Policy</a> *
+                    </label>
+                </div>
+            </section>
+
+            <div class="form-actions">
+                <button type="button" class="btn-secondary" onclick="history.back()">Cancel</button>
+                <button type="submit" class="btn-primary">Submit Registration</button>
+            </div>
+        </form>
+    </div>
+
+    <script src="seller-registration.js"></script>
+</body>
+</html>

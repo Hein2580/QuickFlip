@@ -35,11 +35,10 @@ document.addEventListener('alpine:init', () => {
                     };
                 }
 
-                // API call to real authentication endpoint with timeout
+                // API call to authentication endpoint
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
                 
-                // Direct API call - CORS needs to be handled on server side or with browser extensions
                 const apiUrl = 'https://api-dev-ateam.duckdns.org/scm/api/shweb/auth/user/login';
                 
                 console.log('🎯 API URL:', apiUrl);
@@ -52,7 +51,7 @@ document.addEventListener('alpine:init', () => {
                     pwd: password
                 }));
                 
-                // Try direct API call first (will fail due to CORS but we'll catch it)
+                // Direct API call - CORS needs to be handled on server side or with browser extensions
                 let response;
                 let data;
                 
@@ -186,12 +185,14 @@ document.addEventListener('alpine:init', () => {
                     const user = {
                         username: username.trim(),
                         name: username.trim(), // Use username as display name since API doesn't provide it
-                        role: 'Buyer', // Default role
+                        role: data.userType || 'Buyer',
                         loginTime: new Date().toISOString(),
                         sessionkey: data.sessionkey,
                         loginTimestamp: data.cts,
                         email: username.includes('@') ? username.trim() : null,
-                        ...data // Include any additional user data from API
+                        sellerId: data.sellerId || null,
+                        sellerStatus: data.sellerStatus || null,
+                        businessIntakeDone: false // Always set to false initially
                     };
 
                 this.currentUser = user;

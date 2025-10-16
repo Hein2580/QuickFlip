@@ -1,4 +1,4 @@
-        async login(username, password) {
+async login(username, password) {
             this.isLoading = true;
             
             try {
@@ -46,11 +46,15 @@
                     const user = {
                         username: username.trim(),
                         name: username.trim(),
-                        role: 'Buyer',
+                        role: data.userType || 'Buyer', // Include user type from API response
                         loginTime: new Date().toISOString(),
                         sessionkey: data.sessionkey,
                         loginTimestamp: data.cts,
-                        email: username.includes('@') ? username.trim() : null
+                        email: username.includes('@') ? username.trim() : null,
+                        sellerId: data.sellerId || null, // Include seller ID if applicable
+                        sellerStatus: data.sellerStatus || null, // Include seller approval status
+                        businessIntakeDone: false, // Always set to false initially
+                        subscriptionActive: false // Always set to false initially
                     };
 
                     this.currentUser = user;
@@ -58,6 +62,15 @@
 
                     localStorage.setItem('quickflip_loggedIn', 'true');
                     localStorage.setItem('quickflip_user', JSON.stringify(user));
+
+                    // Redirect based on user role
+                    if (user.role === 'Seller' && user.sellerStatus === 'pending') {
+                        // Redirect to business intake pending page
+                        window.location.href = 'business-intake-pending.html';
+                    } else if (user.role === 'Seller' && user.sellerStatus === 'approved') {
+                        // Redirect to seller dashboard
+                        window.location.href = 'seller-dashboard.html';
+                    }
 
                     return { success: true, user };
                 } else {
